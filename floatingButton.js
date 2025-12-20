@@ -95,7 +95,7 @@
 
                     case 'openTracker':
                         console.log('Open tracker clicked');
-                        // TODO: Implement open tracker functionality
+                        showTrackerPanel();
                         break;
                 }
             } finally {
@@ -312,6 +312,222 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        // Show tracker panel
+        function showTrackerPanel() {
+            // Remove existing panel if present
+            const existing = document.getElementById('jd-cv-tracker-panel');
+            if (existing) {
+                existing.remove();
+                return; // Toggle behavior
+            }
+
+            // Get tracker data
+            chrome.storage.local.get(['tracker'], (result) => {
+                const tracker = result.tracker || [];
+
+                const panel = document.createElement('div');
+                panel.id = 'jd-cv-tracker-panel';
+                panel.innerHTML = buildTrackerPanelHTML(tracker);
+                document.body.appendChild(panel);
+
+                // Attach close handler
+                const closeBtn = panel.querySelector('.jd-cv-panel-close');
+                closeBtn?.addEventListener('click', () => panel.remove());
+
+                // Attach drag and drop handlers
+                attachDragHandlers(panel);
+
+                // Animate in
+                setTimeout(() => panel.classList.add('show'), 10);
+            });
+        }
+
+        // Build tracker panel HTML
+        function buildTrackerPanelHTML(tracker) {
+            // Group jobs by status
+            const grouped = {
+                Inbox: [],
+                Applied: [],
+                Interview: [],
+                Offer: [],
+                Rejected: []
+            };
+
+            tracker.forEach(job => {
+                if (grouped[job.status]) {
+                    grouped[job.status].push(job);
+                }
+            });
+
+            return `
+            <div class="jd-cv-panel-header">
+                <h2>📋 Job Tracker</h2>
+                <button class="jd-cv-panel-close" title="Close">×</button>
+            </div>
+            <div class="jd-cv-panel-body">
+                ${Object.keys(grouped).map(status => `
+                    <div class="jd-cv-tracker-section" data-status="${status}">
+                        <h3 class="jd-cv-tracker-status-header">
+                            <span>${status}</span>
+                            <span class="jd-cv-tracker-count">${grouped[status].length}</span>
+                        </h3>
+                        ${grouped[status].length > 0 ? `
+                            <div class="jd-cv-tracker-jobs">
+                                ${grouped[status].map(job => `
+                                    <div class="jd-cv-tracker-job" draggable="true" data-job-id="${escapeHtml(job.id)}" data-job-status="${escapeHtml(job.status)}">
+                                        <div class="jd-cv-tracker-job-title">${escapeHtml(job.roleTitle || job.pageTitle || job.title || 'Untitled')}</div>
+                                        <div class="jd-cv-tracker-job-company">${escapeHtml(job.company || 'Unknown')}</div>
+                                        ${job.matchScore ? `<div class="jd-cv-tracker-job-match match-${job.matchLabel}">${job.matchScore}%</div>` : ''}
+                                        <a href="${escapeHtml(job.url)}" target="_blank" class="jd-cv-tracker-job-link" title="Open job posting" onclick="event.stopPropagation()">🔗</a>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : `
+                            <div class="jd-cv-tracker-empty">No jobs in ${status}</div>
+                        `}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        }
+
+        /**
+         * Attach drag and drop handlers to enable moving jobs between status sections
+         * @param {HTMLElement} panel - The tracker panel element
+         */
+        function attachDragHandlers(panel) {
+            let draggedJobId = null;
+            let draggedJobStatus = null;
+
+            // Add dragstart listener to all job cards
+            const jobCards = panel.querySelectorAll('.jd-cv-tracker-job');
+            jobCards.forEach(card => {
+                card.addEventListener('dragstart', (e) => {
+                    draggedJobId = e.target.getAttribute('data-job-id');
+                    draggedJobStatus = e.target.getAttribute('data-job-status');
+                    e.target.style.opacity = '0.5';
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/html', e.target.innerHTML);
+                });
+
+                card.addEventListener('dragend', (e) => {
+                    e.target.style.opacity = '1';
+                });
+            });
+
+            // Add dragover and drop listeners to status sections
+            const sections = panel.querySelectorAll('.jd-cv-tracker-section');
+            sections.forEach(section => {
+                section.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    section.classList.add('drag-over');
+                });
+
+                section.addEventListener('dragleave', (e) => {
+                    // Only remove if we're actually leaving the section (not just entering a child)
+                    if (e.target === section) {
+                        section.classList.remove('drag-over');
+                    }
+                });
+
+                section.addEventListener('drop', async (e) => {
+                    e.preventDefault();
+                    section.classList.remove('drag-over');
+
+                    if (!draggedJobId) return;
+
+                    const newStatus = section.getAttribute('data-status');
+
+                    // Don't do anything if dropping on the same status
+                    if (newStatus === draggedJobStatus) {
+                        return;
+                    }
+
+                    // Update job status in storage
+                    try {
+                        const result = await chrome.storage.local.get(['tracker']);
+                        const tracker = result.tracker || [];
+
+                        const jobIndex = tracker.findIndex(j => j.id === draggedJobId);
+                        if (jobIndex !== -1) {
+                            tracker[jobIndex].status = newStatus;
+                            tracker[jobIndex].updatedAtUtc = new Date().toISOString();
+
+                            await chrome.storage.local.set({ tracker });
+
+                            // Move the job card in the DOM instead of refreshing
+                            const draggedCard = panel.querySelector(`.jd-cv-tracker-job[data-job-id="${draggedJobId}"]`);
+                            const targetJobsContainer = section.querySelector('.jd-cv-tracker-jobs');
+                            const oldSection = draggedCard.closest('.jd-cv-tracker-section');
+
+                            if (draggedCard && targetJobsContainer) {
+                                // Update the card's data-job-status attribute
+                                draggedCard.setAttribute('data-job-status', newStatus);
+
+                                // Remove empty message if present
+                                const emptyMsg = section.querySelector('.jd-cv-tracker-empty');
+                                if (emptyMsg) {
+                                    emptyMsg.remove();
+                                }
+
+                                // Add jobs container if it doesn't exist
+                                if (!targetJobsContainer.parentElement) {
+                                    const emptyDiv = section.querySelector('.jd-cv-tracker-empty');
+                                    if (emptyDiv) {
+                                        emptyDiv.remove();
+                                    }
+                                    const newContainer = document.createElement('div');
+                                    newContainer.className = 'jd-cv-tracker-jobs';
+                                    section.appendChild(newContainer);
+                                    newContainer.appendChild(draggedCard);
+                                } else {
+                                    // Move to new section
+                                    targetJobsContainer.appendChild(draggedCard);
+                                }
+
+                                // Update count badges
+                                const newCount = section.querySelectorAll('.jd-cv-tracker-job').length;
+                                const newCountBadge = section.querySelector('.jd-cv-tracker-count');
+                                if (newCountBadge) {
+                                    newCountBadge.textContent = newCount;
+                                }
+
+                                // Update old section
+                                const oldCount = oldSection.querySelectorAll('.jd-cv-tracker-job').length;
+                                const oldCountBadge = oldSection.querySelector('.jd-cv-tracker-count');
+                                if (oldCountBadge) {
+                                    oldCountBadge.textContent = oldCount;
+                                }
+
+                                // Show empty message if old section is now empty
+                                if (oldCount === 0) {
+                                    const oldJobsContainer = oldSection.querySelector('.jd-cv-tracker-jobs');
+                                    if (oldJobsContainer) {
+                                        oldJobsContainer.remove();
+                                    }
+                                    const emptyDiv = document.createElement('div');
+                                    emptyDiv.className = 'jd-cv-tracker-empty';
+                                    emptyDiv.textContent = `No jobs in ${oldSection.getAttribute('data-status')}`;
+                                    oldSection.appendChild(emptyDiv);
+                                }
+
+                                // Show success toast
+                                showSuccessToast(`Moved to ${newStatus}`);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error updating job status:', error);
+                        showSuccessToast('Failed to update job status');
+                    }
+
+                    // Reset dragged job info
+                    draggedJobId = null;
+                    draggedJobStatus = null;
+                });
+            });
         }
 
     } // End of initFloatingButton()

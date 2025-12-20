@@ -163,6 +163,195 @@
     flex-shrink: 0;
 }
 
+/* Tracker Side Panel */
+#jd-cv-tracker-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 400px;
+    z-index: 2147483647;
+
+    background: white;
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+
+    display: flex;
+    flex-direction: column;
+
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+}
+
+#jd-cv-tracker-panel.show {
+    transform: translateX(0);
+}
+
+.jd-cv-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    flex-shrink: 0;
+}
+
+.jd-cv-panel-header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.jd-cv-panel-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    font-size: 28px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    line-height: 1;
+    padding: 0;
+}
+
+.jd-cv-panel-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+}
+
+.jd-cv-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+}
+
+.jd-cv-tracker-section {
+    margin-bottom: 24px;
+    padding: 8px;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+}
+
+.jd-cv-tracker-section.drag-over {
+    background: #eff6ff;
+    border: 2px dashed #3b82f6;
+}
+
+.jd-cv-tracker-status-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f2937;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.jd-cv-tracker-count {
+    background: #f3f4f6;
+    color: #6b7280;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.jd-cv-tracker-jobs {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.jd-cv-tracker-job {
+    position: relative;
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 12px;
+    padding-right: 40px;
+    transition: all 0.2s ease;
+    cursor: move;
+}
+
+.jd-cv-tracker-job:hover {
+    background: #f3f4f6;
+    transform: translateX(4px);
+}
+
+.jd-cv-tracker-job[draggable="true"] {
+    cursor: grab;
+}
+
+.jd-cv-tracker-job[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+.jd-cv-tracker-job-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 4px;
+}
+
+.jd-cv-tracker-job-company {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 6px;
+}
+
+.jd-cv-tracker-job-match {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.jd-cv-tracker-job-match.match-high {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.jd-cv-tracker-job-match.match-medium {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.jd-cv-tracker-job-match.match-low {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.jd-cv-tracker-job-link {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 16px;
+    text-decoration: none;
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+}
+
+.jd-cv-tracker-job-link:hover {
+    opacity: 1;
+}
+
+.jd-cv-tracker-empty {
+    font-size: 13px;
+    color: #9ca3af;
+    font-style: italic;
+    padding: 12px;
+    text-align: center;
+}
+
 /* Overlay */
 #jd-cv-overlay {
     position: fixed;
