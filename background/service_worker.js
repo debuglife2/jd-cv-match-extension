@@ -194,7 +194,18 @@ async function handleSaveToTracker(tab) {
         // 4. Check for duplicates
         const exists = tracker.some(j => j.url === job.url);
         if (exists) {
-            throw new Error('This job is already in your tracker');
+            const cuteMessages = [
+                '👀 Looks like you already saved this one!',
+                '🔄 This job is already in your tracker!',
+                '✅ Already got this one covered!',
+                '📌 This gem is already saved!',
+                '🎯 You\'re already tracking this opportunity!',
+                '💫 Great minds think alike - already saved!',
+                '🌟 This one\'s already on your radar!',
+                '🔖 Already bookmarked this beauty!'
+            ];
+            const randomMessage = cuteMessages[Math.floor(Math.random() * cuteMessages.length)];
+            throw new Error(randomMessage);
         }
 
         // 5. Add to tracker (max 200 jobs)

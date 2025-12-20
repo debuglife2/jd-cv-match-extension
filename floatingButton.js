@@ -105,10 +105,16 @@
 
         // Handle analyze action
         async function handleAnalyze() {
+            // Show loading indicator
+            showLoadingOverlay();
+
             try {
                 const response = await chrome.runtime.sendMessage({
                     action: 'analyzeCurrentPage'
                 });
+
+                // Hide loading indicator
+                hideLoadingOverlay();
 
                 if (response && response.success) {
                     showOverlay(response.data);
@@ -117,6 +123,7 @@
                 }
             } catch (error) {
                 console.error('Error triggering analysis:', error);
+                hideLoadingOverlay();
                 showError('Could not connect to extension. Please try again.');
             }
         }
@@ -129,7 +136,18 @@
                 });
 
                 if (response && response.success) {
-                    showSuccessToast('Job saved to tracker!');
+                    const cuteMessages = [
+                        '✨ Job saved! You\'re one step closer!',
+                        '🎯 Added to tracker! Go get \'em!',
+                        '🚀 Saved! Your future awaits!',
+                        '💼 Job tracked! Let\'s land this one!',
+                        '⭐ Added! Time to shine!',
+                        '🎉 Saved to tracker! You got this!',
+                        '💪 Job captured! Ready to apply?',
+                        '🌟 Tracked! Your next adventure awaits!'
+                    ];
+                    const randomMessage = cuteMessages[Math.floor(Math.random() * cuteMessages.length)];
+                    showSuccessToast(randomMessage);
                 } else {
                     showError(response?.error || 'Failed to save job to tracker.');
                 }
@@ -254,7 +272,7 @@
             <div class="jd-cv-backdrop"></div>
             <div class="jd-cv-content jd-cv-error">
                 <div class="jd-cv-header">
-                    <h2>⚠️ Error</h2>
+                    <h2>⚠️ Oops!</h2>
                     <button class="jd-cv-close-btn">×</button>
                 </div>
                 <div class="jd-cv-body">
@@ -271,6 +289,42 @@
             backdrop?.addEventListener('click', () => overlay.remove());
 
             setTimeout(() => overlay.classList.add('show'), 10);
+        }
+
+        // Show loading overlay
+        function showLoadingOverlay() {
+            const existing = document.getElementById('jd-cv-loading-overlay');
+            if (existing) return;
+
+            const overlay = document.createElement('div');
+            overlay.id = 'jd-cv-loading-overlay';
+            overlay.className = 'jd-cv-overlay';
+            overlay.innerHTML = `
+            <div class="jd-cv-backdrop"></div>
+            <div class="jd-cv-content jd-cv-loading">
+                <div class="jd-cv-loading-spinner">
+                    <svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="30" cy="30" r="25" fill="none" stroke="#e5e7eb" stroke-width="4"/>
+                        <circle cx="30" cy="30" r="25" fill="none" stroke="#3b82f6" stroke-width="4" stroke-linecap="round" stroke-dasharray="120" stroke-dashoffset="30">
+                            <animateTransform attributeName="transform" type="rotate" from="0 30 30" to="360 30 30" dur="1s" repeatCount="indefinite"/>
+                        </circle>
+                    </svg>
+                </div>
+                <h3 class="jd-cv-loading-text">Analyzing job description...</h3>
+                <p class="jd-cv-loading-subtext">This may take a few moments</p>
+            </div>
+        `;
+            document.body.appendChild(overlay);
+            setTimeout(() => overlay.classList.add('show'), 10);
+        }
+
+        // Hide loading overlay
+        function hideLoadingOverlay() {
+            const overlay = document.getElementById('jd-cv-loading-overlay');
+            if (overlay) {
+                overlay.classList.remove('show');
+                setTimeout(() => overlay.remove(), 300);
+            }
         }
 
         // Show success toast
@@ -419,18 +473,19 @@
 
             // Add dragover and drop listeners to status sections
             const sections = panel.querySelectorAll('.jd-cv-tracker-section');
-            sections.forEach(section => {
+            sections.forEach((section) => {
+                section.addEventListener('dragenter', (e) => {
+                    e.preventDefault();
+                });
+
                 section.addEventListener('dragover', (e) => {
                     e.preventDefault();
                     e.dataTransfer.dropEffect = 'move';
                     section.classList.add('drag-over');
                 });
 
-                section.addEventListener('dragleave', (e) => {
-                    // Only remove if we're actually leaving the section (not just entering a child)
-                    if (e.target === section) {
-                        section.classList.remove('drag-over');
-                    }
+                section.addEventListener('dragleave', () => {
+                    section.classList.remove('drag-over');
                 });
 
                 section.addEventListener('drop', async (e) => {
@@ -460,10 +515,10 @@
 
                             // Move the job card in the DOM instead of refreshing
                             const draggedCard = panel.querySelector(`.jd-cv-tracker-job[data-job-id="${draggedJobId}"]`);
-                            const targetJobsContainer = section.querySelector('.jd-cv-tracker-jobs');
+                            let targetJobsContainer = section.querySelector('.jd-cv-tracker-jobs');
                             const oldSection = draggedCard.closest('.jd-cv-tracker-section');
 
-                            if (draggedCard && targetJobsContainer) {
+                            if (draggedCard) {
                                 // Update the card's data-job-status attribute
                                 draggedCard.setAttribute('data-job-status', newStatus);
 
@@ -473,20 +528,18 @@
                                     emptyMsg.remove();
                                 }
 
-                                // Add jobs container if it doesn't exist
-                                if (!targetJobsContainer.parentElement) {
-                                    const emptyDiv = section.querySelector('.jd-cv-tracker-empty');
-                                    if (emptyDiv) {
-                                        emptyDiv.remove();
-                                    }
-                                    const newContainer = document.createElement('div');
-                                    newContainer.className = 'jd-cv-tracker-jobs';
-                                    section.appendChild(newContainer);
-                                    newContainer.appendChild(draggedCard);
-                                } else {
-                                    // Move to new section
-                                    targetJobsContainer.appendChild(draggedCard);
+                                // Create jobs container if it doesn't exist
+                                if (!targetJobsContainer) {
+                                    targetJobsContainer = document.createElement('div');
+                                    targetJobsContainer.className = 'jd-cv-tracker-jobs';
+                                    section.appendChild(targetJobsContainer);
                                 }
+
+                                // Move to new section
+                                targetJobsContainer.appendChild(draggedCard);
+
+                                // Move to new section
+                                targetJobsContainer.appendChild(draggedCard);
 
                                 // Update count badges
                                 const newCount = section.querySelectorAll('.jd-cv-tracker-job').length;

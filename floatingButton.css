@@ -237,6 +237,8 @@
     padding: 8px;
     border-radius: 8px;
     transition: background-color 0.2s ease;
+    min-height: 60px;
+    position: relative;
 }
 
 .jd-cv-tracker-section.drag-over {
@@ -399,6 +401,32 @@
     max-width: 500px;
 }
 
+/* Loading State */
+.jd-cv-content.jd-cv-loading {
+    max-width: 400px;
+    text-align: center;
+    padding: 48px 32px;
+}
+
+.jd-cv-loading-spinner {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 24px;
+}
+
+.jd-cv-loading-text {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.jd-cv-loading-subtext {
+    margin: 0;
+    font-size: 14px;
+    color: #6b7280;
+}
+
 /* Header */
 .jd-cv-header {
     display: flex;
@@ -442,6 +470,13 @@
     padding: 24px;
     overflow-y: auto;
     flex: 1;
+}
+
+.jd-cv-body p {
+    font-size: 16px;
+    line-height: 1.6;
+    color: #374151;
+    margin: 0;
 }
 
 /* Score Section */
