@@ -1,0 +1,45 @@
+{
+    "manifest_version": 3,
+    "name": "JD-CV Match Analyzer",
+    "version": "1.0.0",
+    "description": "Analyze job descriptions against your CV and get tailored suggestions using Azure OpenAI",
+    "permissions": [
+        "activeTab",
+        "scripting",
+        "storage"
+    ],
+    "host_permissions": [
+        "<all_urls>"
+    ],
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": {
+            "16": "icons/icon16.svg",
+            "48": "icons/icon48.svg",
+            "128": "icons/icon128.svg"
+        }
+    },
+    "background": {
+        "service_worker": "background/service_worker.js"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "<all_urls>"
+            ],
+            "js": [
+                "contentScript.js",
+                "floatingButton.js"
+            ],
+            "css": [
+                "floatingButton.css"
+            ],
+            "run_at": "document_idle"
+        }
+    ],
+    "icons": {
+        "16": "icons/icon16.svg",
+        "48": "icons/icon48.svg",
+        "128": "icons/icon128.svg"
+    }
+}

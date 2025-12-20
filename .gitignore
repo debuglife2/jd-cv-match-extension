@@ -1,0 +1,48 @@
+# Chrome Extension .gitignore
+
+# Private data - NEVER commit these
+*.pem
+*.crx
+key.pem
+
+# User data
+user-cv.txt
+my-cv.txt
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Environment files (if you add them later)
+.env
+.env.local
+.env.production
+
+# Build artifacts (if you add build process)
+dist/
+build/
+*.zip
+
+# Node modules (if you add npm later)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Backup files
+*.bak
+*.backup
+
+# Temporary files
+tmp/
+temp/

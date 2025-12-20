@@ -1,0 +1,99 @@
+# Sample CV (Plain Text Format)
+
+This is a sample CV in plain text format. Replace this with your actual CV content.
+
+## Contact Information
+John Doe
+Email: john.doe@example.com
+Phone: (555) 123-4567
+LinkedIn: linkedin.com/in/johndoe
+Location: San Francisco, CA
+
+## Professional Summary
+Senior Software Engineer with 5+ years of experience in full-stack development, specializing in React, Node.js, and cloud technologies. Proven track record of building scalable web applications and leading development teams. Strong problem-solving skills and passion for clean, maintainable code.
+
+## Work Experience
+
+### Senior Software Engineer | Tech Company Inc.
+San Francisco, CA | Jan 2021 - Present
+
+- Led development of customer-facing web application serving 100K+ daily active users, resulting in 30% increase in user engagement
+- Architected and implemented microservices backend using Node.js and Express, improving system reliability to 99.9% uptime
+- Mentored team of 4 junior developers, conducting code reviews and establishing best practices for React development
+- Reduced page load time by 40% through implementation of code splitting and lazy loading strategies
+- Collaborated with product and design teams to deliver 15+ major features on schedule
+
+### Software Engineer | Startup XYZ
+San Francisco, CA | Jun 2019 - Dec 2020
+
+- Developed RESTful APIs using Node.js and MongoDB, handling 1M+ API requests daily
+- Built responsive web interfaces using React and TypeScript, improving mobile user experience by 50%
+- Implemented CI/CD pipeline using GitHub Actions, reducing deployment time from hours to minutes
+- Integrated third-party payment processing (Stripe) and authentication services (Auth0)
+- Participated in agile development process with 2-week sprints
+
+### Junior Software Developer | Digital Agency
+New York, NY | Jul 2018 - May 2019
+
+- Created custom WordPress themes and plugins for client websites
+- Developed interactive features using JavaScript and jQuery
+- Collaborated with designers to implement pixel-perfect interfaces
+- Maintained and updated 20+ client websites
+
+## Education
+
+### Bachelor of Science in Computer Science
+University of California, Berkeley | 2014 - 2018
+GPA: 3.7/4.0
+
+Relevant Coursework: Data Structures, Algorithms, Database Systems, Web Development, Software Engineering
+
+## Technical Skills
+
+### Programming Languages
+JavaScript, TypeScript, Python, Java, HTML5, CSS3, SQL
+
+### Frameworks & Libraries
+React, Node.js, Express, Next.js, Redux, Vue.js, Django
+
+### Databases
+MongoDB, PostgreSQL, MySQL, Redis
+
+### Cloud & DevOps
+AWS (EC2, S3, Lambda), Docker, Kubernetes, GitHub Actions, Jenkins
+
+### Tools & Platforms
+Git, GitHub, Jira, Figma, VS Code, Postman
+
+## Projects
+
+### Personal Finance Tracker (Side Project)
+- Built full-stack application using React and Node.js for tracking personal expenses
+- Implemented data visualization using Chart.js showing spending trends
+- Deployed on AWS using Docker containers
+- Open-sourced on GitHub with 200+ stars
+
+### E-commerce Platform (Freelance)
+- Developed custom e-commerce solution for small business using Next.js and Stripe
+- Implemented inventory management system and order tracking
+- Achieved 100% client satisfaction and referrals
+
+## Certifications
+
+- AWS Certified Developer - Associate (2022)
+- MongoDB Certified Developer (2021)
+
+## Achievements
+
+- Winner of Company Hackathon 2022 (built AI chatbot in 24 hours)
+- Contributed to open-source React library with 10K+ weekly downloads
+- Technical blog with 5K+ monthly readers
+
+## Languages
+
+- English (Native)
+- Spanish (Conversational)
+
+---
+
+Note: This is a sample CV for demonstration purposes. Replace all information with your actual experience, skills, and achievements.

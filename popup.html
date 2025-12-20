@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JD-CV Match Analyzer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>JD-CV Match Analyzer</h1>
+            <div class="header-actions">
+                <button id="settingsBtn" class="btn-icon" title="Settings">⚙️</button>
+                <button id="uploadCVBtn" class="btn-secondary">📄 Upload CV</button>
+            </div>
+        </header>
+
+        <!-- CV Upload Section (hidden file input) -->
+        <input type="file" id="cvFileInput" accept=".pdf,.docx,.txt" style="display: none;">
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Current JD Section -->
+            <section id="currentJDSection" class="section">
+                <h2>Current Job Description</h2>
+
+                <!-- Page Info -->
+                <div id="pageInfo" class="page-info">
+                    <div id="pageTitle" class="page-title">No page loaded</div>
+                    <div id="pageUrl" class="page-url"></div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button id="analyzeBtn" class="btn-primary">🔍 Analyze Current Page</button>
+                    <button id="saveToTrackerBtn" class="btn-secondary" disabled>💾 Save to Tracker</button>
+                    <button id="copyBulletsBtn" class="btn-secondary" disabled>📋 Copy Tailored Bullets</button>
+                </div>
+
+                <!-- Loading State -->
+                <div id="loadingState" class="loading-state" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Analyzing job description...</p>
+                </div>
+
+                <!-- Error State -->
+                <div id="errorState" class="error-state" style="display: none;">
+                    <p class="error-message"></p>
+                </div>
+
+                <!-- Analysis Results -->
+                <div id="analysisResults" class="analysis-results" style="display: none;">
+                    <!-- Match Score -->
+                    <div class="match-score-container">
+                        <div class="match-score">
+                            <span id="matchScore" class="score-value">--</span>
+                            <span class="score-label">Match Score</span>
+                        </div>
+                        <div id="matchLabel" class="match-label">--</div>
+                    </div>
+
+                    <!-- Match Explanation -->
+                    <div class="explanation-section">
+                        <h3>Match Explanation</h3>
+                        <div class="explanation-items">
+                            <div class="explanation-item">
+                                <span class="explanation-icon">💪</span>
+                                <div>
+                                    <strong>Strength:</strong>
+                                    <p id="strengthText">--</p>
+                                </div>
+                            </div>
+                            <div class="explanation-item">
+                                <span class="explanation-icon">⚠️</span>
+                                <div>
+                                    <strong>Risk:</strong>
+                                    <p id="riskText">--</p>
+                                </div>
+                            </div>
+                            <div class="explanation-item">
+                                <span class="explanation-icon">💡</span>
+                                <div>
+                                    <strong>Suggestion:</strong>
+                                    <p id="suggestionText">--</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gap Analysis -->
+                    <div class="gap-analysis-section">
+                        <h3>Gap Analysis</h3>
+                        <ul id="gapAnalysisList" class="gap-list"></ul>
+                    </div>
+
+                    <!-- Tailored Bullets -->
+                    <div class="tailored-bullets-section">
+                        <h3>Tailored CV Bullets</h3>
+                        <ul id="tailoredBulletsList" class="bullets-list"></ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tracker Section -->
+            <section id="trackerSection" class="section">
+                <h2>Job Tracker</h2>
+
+                <!-- Search -->
+                <div class="search-container">
+                    <input type="text" id="trackerSearch" placeholder="Search by title or company..."
+                        class="search-input">
+                </div>
+
+                <!-- Status Filter -->
+                <div class="status-filter">
+                    <button class="filter-btn active" data-status="all">All</button>
+                    <button class="filter-btn" data-status="Inbox">Inbox</button>
+                    <button class="filter-btn" data-status="Applied">Applied</button>
+                    <button class="filter-btn" data-status="Interview">Interview</button>
+                    <button class="filter-btn" data-status="Offer">Offer</button>
+                    <button class="filter-btn" data-status="Rejected">Rejected</button>
+                </div>
+
+                <!-- Tracker List -->
+                <div id="trackerList" class="tracker-list">
+                    <p class="empty-state">No jobs tracked yet. Analyze a job and save it to get started!</p>
+                </div>
+            </section>
+        </main>
+
+        <!-- Settings Modal -->
+        <div id="settingsModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Settings</h2>
+                    <button id="closeSettingsBtn" class="btn-close">×</button>
+                </div>
+                <div class="modal-body">
+                    <div
+                        style="padding: 12px; background: #fef3c7; border-radius: 6px; margin-bottom: 16px; border-left: 3px solid #f59e0b;">
+                        <strong>⚠️ Testing Mode Active</strong>
+                        <p style="margin: 4px 0 0 0; font-size: 13px; color: #92400e;">Azure OpenAI is currently
+                            commented out. The extension will use mock data for testing the workflow. These settings are
+                            optional.</p>
+                    </div>
+
+                    <form id="settingsForm">
+                        <div class="form-group">
+                            <label for="azureEndpoint">Azure OpenAI Endpoint <span
+                                    style="color: #94a3b8; font-weight: normal;">(Optional for testing)</span></label>
+                            <input type="text" id="azureEndpoint" placeholder="https://your-resource.openai.azure.com/">
+                            <small>Example: https://your-resource.openai.azure.com/</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="apiKey">API Key <span style="color: #94a3b8; font-weight: normal;">(Optional for
+                                    testing)</span></label>
+                            <input type="password" id="apiKey" placeholder="Your Azure OpenAI API key">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="deployment">Deployment Name <span
+                                    style="color: #94a3b8; font-weight: normal;">(Optional for testing)</span></label>
+                            <input type="text" id="deployment" placeholder="gpt-4">
+                            <small>The name of your deployed model</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="apiVersion">API Version <span
+                                    style="color: #94a3b8; font-weight: normal;">(Optional for testing)</span></label>
+                            <input type="text" id="apiVersion" value="2024-02-15-preview">
+                        </div>
+
+                        <div class="form-group">
+                            <label
+                                style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
+                                <span>Show floating button on pages</span>
+                                <input type="checkbox" id="floatingButtonEnabled" checked>
+                            </label>
+                            <small style="display: block; margin-top: 8px; color: #666;">
+                                Toggle the floating button that appears on job pages instantly.
+                            </small>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" id="testConnectionBtn" class="btn-secondary">Test Connection
+                                (Mock)</button>
+                            <button type="submit" class="btn-primary">Save Settings</button>
+                        </div>
+                    </form>
+
+                    <div id="connectionTestResult" style="display: none; margin-top: 1rem;"></div>
+
+                    <div class="cv-status">
+                        <h3>CV Status</h3>
+                        <p id="cvStatus">No CV uploaded</p>
+                        <button id="clearCVBtn" class="btn-secondary" style="display: none;">Clear CV</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="popup.js"></script>
+</body>
+
+</html>
