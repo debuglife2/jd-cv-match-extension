@@ -172,11 +172,22 @@
                     const randomMessage = cuteMessages[Math.floor(Math.random() * cuteMessages.length)];
                     showSuccessToast(randomMessage);
                 } else {
-                    showError(response?.error || 'Failed to save job to tracker.');
+                    // Check if it's a duplicate message
+                    const errorMsg = response?.error || 'Failed to save job to tracker.';
+                    if (errorMsg.includes('already')) {
+                        showInfoMessage(errorMsg);
+                    } else {
+                        showError(errorMsg);
+                    }
                 }
             } catch (error) {
                 console.error('Error saving to tracker:', error);
-                showError(error.message || 'Could not save to tracker. Please try again.');
+                const errorMsg = error.message || 'Could not save to tracker. Please try again.';
+                if (errorMsg.includes('already')) {
+                    showInfoMessage(errorMsg);
+                } else {
+                    showError(errorMsg);
+                }
             }
         }    // Show overlay with results
         function showOverlay(analysisData) {
@@ -296,6 +307,33 @@
             <div class="jd-cv-content jd-cv-error">
                 <div class="jd-cv-header">
                     <h2>⚠️ Oops!</h2>
+                    <button class="jd-cv-close-btn">×</button>
+                </div>
+                <div class="jd-cv-body">
+                    <p>${escapeHtml(message)}</p>
+                </div>
+            </div>
+        `;
+            document.body.appendChild(overlay);
+
+            const closeBtn = overlay.querySelector('.jd-cv-close-btn');
+            closeBtn?.addEventListener('click', () => overlay.remove());
+
+            const backdrop = overlay.querySelector('.jd-cv-backdrop');
+            backdrop?.addEventListener('click', () => overlay.remove());
+
+            setTimeout(() => overlay.classList.add('show'), 10);
+        }
+
+        // Show info message (for non-error situations like duplicates)
+        function showInfoMessage(message) {
+            const overlay = document.createElement('div');
+            overlay.id = 'jd-cv-overlay';
+            overlay.innerHTML = `
+            <div class="jd-cv-backdrop"></div>
+            <div class="jd-cv-content jd-cv-info">
+                <div class="jd-cv-header">
+                    <h2>😊 Hey There!</h2>
                     <button class="jd-cv-close-btn">×</button>
                 </div>
                 <div class="jd-cv-body">

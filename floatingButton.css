@@ -431,6 +431,14 @@
     max-width: 500px;
 }
 
+.jd-cv-content.jd-cv-info {
+    max-width: 500px;
+}
+
+.jd-cv-content.jd-cv-info .jd-cv-header {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
 /* Loading State */
 .jd-cv-content.jd-cv-loading {
     max-width: 400px;
