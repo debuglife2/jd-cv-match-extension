@@ -67,13 +67,13 @@
             <span class="jd-cv-action-icon">🚫</span>
             <span class="jd-cv-action-label">Turn Off</span>
         </button>
-        <button class="jd-cv-action-btn" data-action="analyze" title="Analyze job with AI">
-            <span class="jd-cv-action-icon">🤖</span>
-            <span class="jd-cv-action-label">Analyze Job</span>
-        </button>
         <button class="jd-cv-action-btn" data-action="save" title="Save to tracker">
             <span class="jd-cv-action-icon">📌</span>
             <span class="jd-cv-action-label">Add to Tracker</span>
+        </button>
+        <button class="jd-cv-action-btn" data-action="analyze" title="Analyze job with AI">
+            <span class="jd-cv-action-icon">🤖</span>
+            <span class="jd-cv-action-label">Analyze Job</span>
         </button>
         <button class="jd-cv-action-btn" data-action="openTracker" title="Open job tracker">
             <span class="jd-cv-action-icon">📋</span>
@@ -495,7 +495,7 @@
                             <div class="jd-cv-tracker-jobs">
                                 ${grouped[status].map(job => `
                                     <div class="jd-cv-tracker-job" draggable="true" data-job-id="${escapeHtml(job.id)}" data-job-status="${escapeHtml(job.status)}">
-                                        <button class="jd-cv-tracker-job-delete" title="Delete job" data-job-id="${escapeHtml(job.id)}">×</button>
+                                        <button class="jd-cv-tracker-job-delete" title="Delete job" data-job-id="${escapeHtml(job.id)}">🗑️</button>
                                         <div class="jd-cv-tracker-job-title">${escapeHtml(job.roleTitle || job.pageTitle || job.title || 'Untitled')}</div>
                                         <div class="jd-cv-tracker-job-company">${escapeHtml(job.company || 'Unknown')}</div>
                                         ${job.matchScore ? `<div class="jd-cv-tracker-job-match match-${job.matchLabel}">${job.matchScore}%</div>` : ''}
@@ -654,45 +654,59 @@
                     e.stopPropagation();
                     const jobId = btn.getAttribute('data-job-id');
 
-                    if (!confirm('Are you sure you want to delete this job?')) {
-                        return;
-                    }
+                    // Check if already in confirm state
+                    if (btn.classList.contains('confirm-delete')) {
+                        // Second click - actually delete
+                        try {
+                            // Remove from storage
+                            const result = await chrome.storage.local.get(['tracker']);
+                            const tracker = result.tracker || [];
+                            const updatedTracker = tracker.filter(j => j.id !== jobId);
+                            await chrome.storage.local.set({ tracker: updatedTracker });
 
-                    try {
-                        // Remove from storage
-                        const result = await chrome.storage.local.get(['tracker']);
-                        const tracker = result.tracker || [];
-                        const updatedTracker = tracker.filter(j => j.id !== jobId);
-                        await chrome.storage.local.set({ tracker: updatedTracker });
+                            // Remove from DOM
+                            const jobCard = panel.querySelector(`.jd-cv-tracker-job[data-job-id="${jobId}"]`);
+                            const section = jobCard.closest('.jd-cv-tracker-section');
+                            jobCard.remove();
 
-                        // Remove from DOM
-                        const jobCard = panel.querySelector(`.jd-cv-tracker-job[data-job-id="${jobId}"]`);
-                        const section = jobCard.closest('.jd-cv-tracker-section');
-                        jobCard.remove();
-
-                        // Update count
-                        const count = section.querySelectorAll('.jd-cv-tracker-job').length;
-                        const countBadge = section.querySelector('.jd-cv-tracker-count');
-                        if (countBadge) {
-                            countBadge.textContent = count;
-                        }
-
-                        // Show empty message if section is now empty
-                        if (count === 0) {
-                            const jobsContainer = section.querySelector('.jd-cv-tracker-jobs');
-                            if (jobsContainer) {
-                                jobsContainer.remove();
+                            // Update count
+                            const count = section.querySelectorAll('.jd-cv-tracker-job').length;
+                            const countBadge = section.querySelector('.jd-cv-tracker-count');
+                            if (countBadge) {
+                                countBadge.textContent = count;
                             }
-                            const emptyDiv = document.createElement('div');
-                            emptyDiv.className = 'jd-cv-tracker-empty';
-                            emptyDiv.textContent = `No jobs in ${section.getAttribute('data-status')}`;
-                            section.appendChild(emptyDiv);
-                        }
 
-                        showSuccessToast('Job deleted');
-                    } catch (error) {
-                        console.error('Error deleting job:', error);
-                        showSuccessToast('Failed to delete job');
+                            // Show empty message if section is now empty
+                            if (count === 0) {
+                                const jobsContainer = section.querySelector('.jd-cv-tracker-jobs');
+                                if (jobsContainer) {
+                                    jobsContainer.remove();
+                                }
+                                const emptyDiv = document.createElement('div');
+                                emptyDiv.className = 'jd-cv-tracker-empty';
+                                emptyDiv.textContent = `No jobs in ${section.getAttribute('data-status')}`;
+                                section.appendChild(emptyDiv);
+                            }
+
+                            showSuccessToast('Job deleted');
+                        } catch (error) {
+                            console.error('Error deleting job:', error);
+                            showSuccessToast('Failed to delete job');
+                        }
+                    } else {
+                        // First click - change to confirm state
+                        btn.classList.add('confirm-delete');
+                        btn.textContent = 'Delete';
+                        btn.title = 'Click again to confirm';
+
+                        // Reset after 3 seconds if not clicked
+                        setTimeout(() => {
+                            if (btn.classList.contains('confirm-delete')) {
+                                btn.classList.remove('confirm-delete');
+                                btn.textContent = '🗑️';
+                                btn.title = 'Delete job';
+                            }
+                        }, 3000);
                     }
                 });
             });
