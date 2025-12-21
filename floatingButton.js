@@ -10,6 +10,26 @@
     }
     window.jdCvFloatingButtonLoaded = true;
 
+    // Helper function to safely send messages to background script
+    async function sendMessageSafely(message) {
+        try {
+            // Check if extension context is valid
+            if (!chrome.runtime?.id) {
+                throw new Error('Extension context invalidated. Please reload the page.');
+            }
+
+            const response = await chrome.runtime.sendMessage(message);
+            return response;
+        } catch (error) {
+            if (error.message.includes('Extension context invalidated') ||
+                error.message.includes('message port closed') ||
+                error.message.includes('Receiving end does not exist')) {
+                throw new Error('Extension was reloaded. Please refresh this page to continue.');
+            }
+            throw error;
+        }
+    }
+
     // Check if floating button is enabled
     chrome.storage.local.get(['floatingButtonEnabled'], (result) => {
         const isEnabled = result.floatingButtonEnabled !== false; // Default to true
@@ -109,7 +129,7 @@
             showLoadingOverlay();
 
             try {
-                const response = await chrome.runtime.sendMessage({
+                const response = await sendMessageSafely({
                     action: 'analyzeCurrentPage'
                 });
 
@@ -124,14 +144,14 @@
             } catch (error) {
                 console.error('Error triggering analysis:', error);
                 hideLoadingOverlay();
-                showError('Could not connect to extension. Please try again.');
+                showError(error.message || 'Could not connect to extension. Please try again.');
             }
         }
 
         // Handle save to tracker action
         async function handleSaveToTracker() {
             try {
-                const response = await chrome.runtime.sendMessage({
+                const response = await sendMessageSafely({
                     action: 'saveToTracker'
                 });
 
@@ -153,7 +173,7 @@
                 }
             } catch (error) {
                 console.error('Error saving to tracker:', error);
-                showError('Could not save to tracker. Please try again.');
+                showError(error.message || 'Could not save to tracker. Please try again.');
             }
         }    // Show overlay with results
         function showOverlay(analysisData) {
@@ -222,15 +242,15 @@
                             <div class="jd-cv-card jd-cv-weakness">
                                 <div class="jd-cv-card-icon">⚠️</div>
                                 <div class="jd-cv-card-content">
-                                    <strong>Weakness</strong>
-                                    <p>${escapeHtml(data.explanation.weakness)}</p>
+                                    <strong>Risk</strong>
+                                    <p>${escapeHtml(data.explanation.risk)}</p>
                                 </div>
                             </div>
                             <div class="jd-cv-card jd-cv-recommendation">
                                 <div class="jd-cv-card-icon">💡</div>
                                 <div class="jd-cv-card-content">
-                                    <strong>Recommendation</strong>
-                                    <p>${escapeHtml(data.explanation.recommendation)}</p>
+                                    <strong>Suggestion</strong>
+                                    <p>${escapeHtml(data.explanation.suggestion)}</p>
                                 </div>
                             </div>
                         </div>
@@ -431,6 +451,7 @@
                             <div class="jd-cv-tracker-jobs">
                                 ${grouped[status].map(job => `
                                     <div class="jd-cv-tracker-job" draggable="true" data-job-id="${escapeHtml(job.id)}" data-job-status="${escapeHtml(job.status)}">
+                                        <button class="jd-cv-tracker-job-delete" title="Delete job" data-job-id="${escapeHtml(job.id)}">×</button>
                                         <div class="jd-cv-tracker-job-title">${escapeHtml(job.roleTitle || job.pageTitle || job.title || 'Untitled')}</div>
                                         <div class="jd-cv-tracker-job-company">${escapeHtml(job.company || 'Unknown')}</div>
                                         ${job.matchScore ? `<div class="jd-cv-tracker-job-match match-${job.matchLabel}">${job.matchScore}%</div>` : ''}
@@ -579,6 +600,56 @@
                     // Reset dragged job info
                     draggedJobId = null;
                     draggedJobStatus = null;
+                });
+            });
+
+            // Add delete button handlers
+            const deleteButtons = panel.querySelectorAll('.jd-cv-tracker-job-delete');
+            deleteButtons.forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const jobId = btn.getAttribute('data-job-id');
+
+                    if (!confirm('Are you sure you want to delete this job?')) {
+                        return;
+                    }
+
+                    try {
+                        // Remove from storage
+                        const result = await chrome.storage.local.get(['tracker']);
+                        const tracker = result.tracker || [];
+                        const updatedTracker = tracker.filter(j => j.id !== jobId);
+                        await chrome.storage.local.set({ tracker: updatedTracker });
+
+                        // Remove from DOM
+                        const jobCard = panel.querySelector(`.jd-cv-tracker-job[data-job-id="${jobId}"]`);
+                        const section = jobCard.closest('.jd-cv-tracker-section');
+                        jobCard.remove();
+
+                        // Update count
+                        const count = section.querySelectorAll('.jd-cv-tracker-job').length;
+                        const countBadge = section.querySelector('.jd-cv-tracker-count');
+                        if (countBadge) {
+                            countBadge.textContent = count;
+                        }
+
+                        // Show empty message if section is now empty
+                        if (count === 0) {
+                            const jobsContainer = section.querySelector('.jd-cv-tracker-jobs');
+                            if (jobsContainer) {
+                                jobsContainer.remove();
+                            }
+                            const emptyDiv = document.createElement('div');
+                            emptyDiv.className = 'jd-cv-tracker-empty';
+                            emptyDiv.textContent = `No jobs in ${section.getAttribute('data-status')}`;
+                            section.appendChild(emptyDiv);
+                        }
+
+                        showSuccessToast('Job deleted');
+                    } catch (error) {
+                        console.error('Error deleting job:', error);
+                        showSuccessToast('Failed to delete job');
+                    }
                 });
             });
         }

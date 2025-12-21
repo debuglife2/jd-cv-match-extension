@@ -1,6 +1,9 @@
 // Background service worker for Chrome Extension
 // Handles extension lifecycle and messaging
 
+// Import Azure OpenAI module
+import { analyzeJDWithCV } from '../azureOpenAI.js';
+
 // Listen for extension installation
 chrome.runtime.onInstalled.addListener((details) => {
     if (details.reason === 'install') {
@@ -149,7 +152,7 @@ async function handleExtractFromTab(tabId) {
 async function handleAnalyzeCurrentPage(tabId) {
     try {
         // 1. Check if CV is uploaded
-        const storage = await chrome.storage.local.get(['cvText']);
+        const storage = await chrome.storage.local.get(['cvText', 'settings']);
         if (!storage.cvText) {
             throw new Error('No CV uploaded. Please upload your CV in the extension popup first.');
         }
@@ -157,8 +160,11 @@ async function handleAnalyzeCurrentPage(tabId) {
         // 2. Extract page content
         const content = await handleExtractFromTab(tabId);
 
-        // 3. Analyze with Azure OpenAI (using mock for now)
-        const analysis = await analyzeMock(content, storage.cvText);
+        console.log('Extracted content:', content);
+        console.log('Main text length:', content.mainText?.length);
+
+        // 3. Analyze with Azure OpenAI
+        const analysis = await analyzeJDWithCV(storage.settings, storage.cvText, content.mainText);
 
         return analysis;
     } catch (error) {
@@ -222,36 +228,6 @@ async function handleSaveToTracker(tab) {
         console.error('Error saving to tracker:', error);
         throw error;
     }
-}
-
-/**
- * Mock analysis function (replace with real Azure OpenAI call)
- */
-async function analyzeMock(jobContent, cvText) {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Return mock data
-    return {
-        match_score: 75,
-        match_label: 'medium',
-        explanation: {
-            strength: 'Strong technical background matching core requirements',
-            weakness: 'Limited experience with some specific tools mentioned',
-            recommendation: 'Highlight relevant projects and consider learning gaps'
-        },
-        gap_analysis: [
-            'Experience with specific cloud platforms could be strengthened',
-            'Team leadership experience not clearly demonstrated',
-            'Industry-specific knowledge may need development'
-        ],
-        tailored_bullets: [
-            'Led development of scalable microservices architecture serving 1M+ users',
-            'Implemented CI/CD pipelines reducing deployment time by 60%',
-            'Collaborated with cross-functional teams to deliver features on schedule',
-            'Optimized database queries improving application performance by 40%'
-        ]
-    };
 }
 
 console.log('JD-CV Match Extension service worker initialized');

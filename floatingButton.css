@@ -296,6 +296,36 @@
     cursor: grabbing;
 }
 
+.jd-cv-tracker-job-delete {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: #ef4444;
+    color: white;
+    border-radius: 50%;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.jd-cv-tracker-job:hover .jd-cv-tracker-job-delete {
+    opacity: 1;
+}
+
+.jd-cv-tracker-job-delete:hover {
+    background: #dc2626;
+    transform: scale(1.1);
+}
+
 .jd-cv-tracker-job-title {
     font-size: 14px;
     font-weight: 600;
