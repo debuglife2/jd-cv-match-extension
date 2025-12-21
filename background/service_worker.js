@@ -147,12 +147,27 @@ async function handleExtractFromTab(tabId) {
 }
 
 /**
+ * Generate cache key for analysis
+ */
+function generateCacheKey(cvText, jobText) {
+    // Create a simple hash of CV + job content for caching
+    const combined = cvText.substring(0, 500) + '||' + jobText.substring(0, 1000);
+    let hash = 0;
+    for (let i = 0; i < combined.length; i++) {
+        const char = combined.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    return 'analysis_' + Math.abs(hash).toString(36);
+}
+
+/**
  * Handle analyze request from floating button
  */
 async function handleAnalyzeCurrentPage(tabId) {
     try {
         // 1. Check if CV is uploaded
-        const storage = await chrome.storage.local.get(['cvText', 'settings']);
+        const storage = await chrome.storage.local.get(['cvText', 'settings', 'analysisCache']);
         if (!storage.cvText) {
             throw new Error('No CV uploaded. Please upload your CV in the extension popup first.');
         }
@@ -163,8 +178,45 @@ async function handleAnalyzeCurrentPage(tabId) {
         console.log('Extracted content:', content);
         console.log('Main text length:', content.mainText?.length);
 
-        // 3. Analyze with Azure OpenAI
+        // 3. Check cache first
+        const cacheKey = generateCacheKey(storage.cvText, content.mainText);
+        const analysisCache = storage.analysisCache || {};
+        
+        if (analysisCache[cacheKey]) {
+            console.log('✅ Using cached analysis for this job');
+            return analysisCache[cacheKey].analysis;
+        }
+
+        console.log('🔄 No cache found, calling Azure OpenAI...');
+
+        // 4. Analyze with Azure OpenAI
         const analysis = await analyzeJDWithCV(storage.settings, storage.cvText, content.mainText);
+
+        // 5. Cache the result
+        analysisCache[cacheKey] = {
+            analysis: analysis,
+            timestamp: Date.now(),
+            jobUrl: content.pageUrl
+        };
+        
+        // Keep only last 50 cached analyses to save storage space
+        const cacheKeys = Object.keys(analysisCache);
+        if (cacheKeys.length > 50) {
+            // Sort by timestamp and remove oldest
+            const sorted = cacheKeys
+                .map(key => ({ key, timestamp: analysisCache[key].timestamp }))
+                .sort((a, b) => b.timestamp - a.timestamp);
+            
+            // Keep only newest 50
+            const newCache = {};
+            sorted.slice(0, 50).forEach(item => {
+                newCache[item.key] = analysisCache[item.key];
+            });
+            
+            await chrome.storage.local.set({ analysisCache: newCache });
+        } else {
+            await chrome.storage.local.set({ analysisCache });
+        }
 
         return analysis;
     } catch (error) {

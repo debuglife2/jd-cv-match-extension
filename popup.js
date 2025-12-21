@@ -164,6 +164,21 @@ function readFileAsText(file) {
 }
 
 /**
+ * Generate cache key for analysis
+ */
+function generateCacheKey(cvText, jobText) {
+    // Create a simple hash of CV + job content for caching
+    const combined = cvText.substring(0, 500) + '||' + jobText.substring(0, 1000);
+    let hash = 0;
+    for (let i = 0; i < combined.length; i++) {
+        const char = combined.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    return 'analysis_' + Math.abs(hash).toString(36);
+}
+
+/**
  * Handle analyze button click
  */
 async function handleAnalyze() {
@@ -281,8 +296,47 @@ async function handleAnalyze() {
             return;
         }
 
-        // Call Azure OpenAI
-        const analysis = await analyzeJDWithCV(settings, cvText, currentPageContent.mainText);
+        // Check cache first
+        const cacheKey = generateCacheKey(cvText, currentPageContent.mainText);
+        console.log('🔑 Generated cache key:', cacheKey);
+        
+        const { analysisCache = {} } = await chrome.storage.local.get('analysisCache');
+        const cachedResult = analysisCache[cacheKey];
+        
+        let analysis;
+        if (cachedResult && cachedResult.analysis) {
+            console.log('✅ Using cached analysis from', new Date(cachedResult.timestamp).toLocaleString());
+            console.log('   Cached job URL:', cachedResult.jobUrl);
+            analysis = cachedResult.analysis;
+        } else {
+            console.log('🔄 No cache found, calling Azure OpenAI...');
+            
+            // Call Azure OpenAI
+            analysis = await analyzeJDWithCV(settings, cvText, currentPageContent.mainText);
+            
+            // Store in cache
+            analysisCache[cacheKey] = {
+                analysis: analysis,
+                timestamp: Date.now(),
+                jobUrl: currentPageContent.pageUrl
+            };
+            
+            // Keep only the 50 most recent analyses
+            const cacheEntries = Object.entries(analysisCache);
+            if (cacheEntries.length > 50) {
+                // Sort by timestamp (oldest first)
+                cacheEntries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+                // Remove oldest entries
+                const entriesToRemove = cacheEntries.length - 50;
+                for (let i = 0; i < entriesToRemove; i++) {
+                    delete analysisCache[cacheEntries[i][0]];
+                }
+                console.log(`🧹 Removed ${entriesToRemove} old cache entries, keeping 50 most recent`);
+            }
+            
+            await chrome.storage.local.set({ analysisCache });
+            console.log('💾 Analysis cached with key:', cacheKey);
+        }
 
         currentAnalysis = analysis;
 
