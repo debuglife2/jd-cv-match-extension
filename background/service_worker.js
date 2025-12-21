@@ -181,7 +181,7 @@ async function handleAnalyzeCurrentPage(tabId) {
         // 3. Check cache first
         const cacheKey = generateCacheKey(storage.cvText, content.mainText);
         const analysisCache = storage.analysisCache || {};
-        
+
         if (analysisCache[cacheKey]) {
             console.log('✅ Using cached analysis for this job');
             return analysisCache[cacheKey].analysis;
@@ -198,7 +198,7 @@ async function handleAnalyzeCurrentPage(tabId) {
             timestamp: Date.now(),
             jobUrl: content.pageUrl
         };
-        
+
         // Keep only last 50 cached analyses to save storage space
         const cacheKeys = Object.keys(analysisCache);
         if (cacheKeys.length > 50) {
@@ -206,13 +206,13 @@ async function handleAnalyzeCurrentPage(tabId) {
             const sorted = cacheKeys
                 .map(key => ({ key, timestamp: analysisCache[key].timestamp }))
                 .sort((a, b) => b.timestamp - a.timestamp);
-            
+
             // Keep only newest 50
             const newCache = {};
             sorted.slice(0, 50).forEach(item => {
                 newCache[item.key] = analysisCache[item.key];
             });
-            
+
             await chrome.storage.local.set({ analysisCache: newCache });
         } else {
             await chrome.storage.local.set({ analysisCache });

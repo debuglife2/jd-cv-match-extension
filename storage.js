@@ -14,7 +14,7 @@ const MAX_TRACKER_ITEMS = 200;
  */
 async function saveCVText(cvText) {
     // Clear analysis cache when CV changes
-    await chrome.storage.local.set({ 
+    await chrome.storage.local.set({
         [STORAGE_KEYS.CV_TEXT]: cvText,
         analysisCache: {} // Clear cache when CV is updated
     });

@@ -5,12 +5,10 @@ import { analyzeJDWithCV, testConnection } from './azureOpenAI.js';
 // State
 let currentPageContent = null;
 let currentAnalysis = null;
-let currentStatusFilter = 'all';
 
 // Initialize popup
 document.addEventListener('DOMContentLoaded', async () => {
     await initializeUI();
-    await loadTrackerData();
     setupEventListeners();
 });
 
@@ -90,19 +88,6 @@ function setupEventListeners() {
 
     // Floating button toggle - instant feedback
     document.getElementById('floatingButtonEnabled').addEventListener('change', handleFloatingButtonToggle);
-
-    // Tracker search
-    document.getElementById('trackerSearch').addEventListener('input', handleTrackerSearch);
-
-    // Status filter buttons
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-            currentStatusFilter = e.target.dataset.status;
-            loadTrackerData();
-        });
-    });
 }
 
 /**
@@ -299,10 +284,10 @@ async function handleAnalyze() {
         // Check cache first
         const cacheKey = generateCacheKey(cvText, currentPageContent.mainText);
         console.log('🔑 Generated cache key:', cacheKey);
-        
+
         const { analysisCache = {} } = await chrome.storage.local.get('analysisCache');
         const cachedResult = analysisCache[cacheKey];
-        
+
         let analysis;
         if (cachedResult && cachedResult.analysis) {
             console.log('✅ Using cached analysis from', new Date(cachedResult.timestamp).toLocaleString());
@@ -310,17 +295,17 @@ async function handleAnalyze() {
             analysis = cachedResult.analysis;
         } else {
             console.log('🔄 No cache found, calling Azure OpenAI...');
-            
+
             // Call Azure OpenAI
             analysis = await analyzeJDWithCV(settings, cvText, currentPageContent.mainText);
-            
+
             // Store in cache
             analysisCache[cacheKey] = {
                 analysis: analysis,
                 timestamp: Date.now(),
                 jobUrl: currentPageContent.pageUrl
             };
-            
+
             // Keep only the 50 most recent analyses
             const cacheEntries = Object.entries(analysisCache);
             if (cacheEntries.length > 50) {
@@ -333,7 +318,7 @@ async function handleAnalyze() {
                 }
                 console.log(`🧹 Removed ${entriesToRemove} old cache entries, keeping 50 most recent`);
             }
-            
+
             await chrome.storage.local.set({ analysisCache });
             console.log('💾 Analysis cached with key:', cacheKey);
         }
@@ -418,7 +403,6 @@ async function handleSaveToTracker() {
         };
 
         await storage.saveJobEntry(jobEntry);
-        await loadTrackerData();
         showSuccess('Saved to tracker!');
     } catch (error) {
         console.error('Error saving to tracker:', error);
@@ -443,142 +427,6 @@ async function handleCopyBullets() {
     } catch (error) {
         console.error('Error copying to clipboard:', error);
         showError('Failed to copy to clipboard');
-    }
-}
-
-/**
- * Load and display tracker data
- */
-async function loadTrackerData() {
-    const trackerList = document.getElementById('trackerList');
-
-    try {
-        let entries;
-        if (currentStatusFilter === 'all') {
-            entries = await storage.getTrackerEntries();
-        } else {
-            entries = await storage.getTrackerEntriesByStatus(currentStatusFilter);
-        }
-
-        // Limit to 10 most recent
-        entries = entries.slice(0, 10);
-
-        if (entries.length === 0) {
-            trackerList.innerHTML = '<p class="empty-state">No jobs found</p>';
-            return;
-        }
-
-        trackerList.innerHTML = '';
-        entries.forEach(entry => {
-            const item = createTrackerItem(entry);
-            trackerList.appendChild(item);
-        });
-    } catch (error) {
-        console.error('Error loading tracker data:', error);
-        trackerList.innerHTML = '<p class="error-state">Failed to load tracker data</p>';
-    }
-}
-
-/**
- * Create a tracker item element
- */
-function createTrackerItem(entry) {
-    const div = document.createElement('div');
-    div.className = 'tracker-item';
-
-    // Handle cases where job wasn't analyzed
-    const hasAnalysis = entry.matchScore !== undefined && entry.matchLabel !== undefined;
-    const matchBadge = hasAnalysis
-        ? `<span class="match-badge match-${entry.matchLabel}">${entry.matchScore}%</span>`
-        : `<span class="match-badge match-pending">Not Analyzed</span>`;
-
-    div.innerHTML = `
-    <div class="tracker-item-header">
-      <div class="tracker-item-title">${escapeHtml(entry.roleTitle || entry.pageTitle || entry.title || 'Untitled')}</div>
-      <button class="btn-icon-small" onclick="deleteTrackerItem('${entry.id}')" title="Delete">🗑️</button>
-    </div>
-    <div class="tracker-item-company">${escapeHtml(entry.company || 'Unknown Company')}</div>
-    <div class="tracker-item-meta">
-      ${matchBadge}
-      <span class="tracker-item-date">${formatDate(entry.updatedAtUtc || entry.lastUpdated || entry.appliedDate)}</span>
-    </div>
-    <div class="tracker-item-status">
-      <select class="status-select" data-id="${entry.id}">
-        <option value="Inbox" ${entry.status === 'Inbox' ? 'selected' : ''}>Inbox</option>
-        <option value="Applied" ${entry.status === 'Applied' ? 'selected' : ''}>Applied</option>
-        <option value="Interview" ${entry.status === 'Interview' ? 'selected' : ''}>Interview</option>
-        <option value="Offer" ${entry.status === 'Offer' ? 'selected' : ''}>Offer</option>
-        <option value="Rejected" ${entry.status === 'Rejected' ? 'selected' : ''}>Rejected</option>
-        <option value="Hidden" ${entry.status === 'Hidden' ? 'selected' : ''}>Hidden</option>
-      </select>
-    </div>
-    <textarea class="tracker-notes" data-id="${entry.id}" placeholder="Add notes (max 500 chars)" maxlength="500">${escapeHtml(entry.notes || '')}</textarea>
-    <div class="tracker-item-actions">
-      <button class="btn-secondary btn-small" onclick="openJobLink('${escapeHtml(entry.url)}')">🔗 Open Link</button>
-    </div>
-  `;
-
-    // Add event listeners
-    const statusSelect = div.querySelector('.status-select');
-    statusSelect.addEventListener('change', (e) => handleStatusChange(entry.id, e.target.value));
-
-    const notesTextarea = div.querySelector('.tracker-notes');
-    notesTextarea.addEventListener('blur', (e) => handleNotesChange(entry.id, e.target.value));
-
-    return div;
-}
-
-/**
- * Handle status change
- */
-async function handleStatusChange(id, newStatus) {
-    try {
-        await storage.updateJobEntry(id, { status: newStatus });
-        // Don't reload if we're on 'all' filter, just update in place
-        if (currentStatusFilter !== 'all') {
-            await loadTrackerData();
-        }
-    } catch (error) {
-        console.error('Error updating status:', error);
-        showError('Failed to update status');
-    }
-}
-
-/**
- * Handle notes change
- */
-async function handleNotesChange(id, newNotes) {
-    try {
-        await storage.updateJobEntry(id, { notes: newNotes });
-    } catch (error) {
-        console.error('Error updating notes:', error);
-        showError('Failed to update notes');
-    }
-}
-
-/**
- * Handle tracker search
- */
-async function handleTrackerSearch(event) {
-    const query = event.target.value;
-    const trackerList = document.getElementById('trackerList');
-
-    try {
-        const entries = await storage.searchTrackerEntries(query);
-        const filtered = entries.slice(0, 10);
-
-        if (filtered.length === 0) {
-            trackerList.innerHTML = '<p class="empty-state">No matching jobs found</p>';
-            return;
-        }
-
-        trackerList.innerHTML = '';
-        filtered.forEach(entry => {
-            const item = createTrackerItem(entry);
-            trackerList.appendChild(item);
-        });
-    } catch (error) {
-        console.error('Error searching tracker:', error);
     }
 }
 
@@ -721,24 +569,6 @@ async function handleClearCV() {
         showSuccess('CV cleared');
     }
 }
-
-// Global functions for inline event handlers
-window.deleteTrackerItem = async function (id) {
-    if (confirm('Delete this job from tracker?')) {
-        try {
-            await storage.deleteJobEntry(id);
-            await loadTrackerData();
-            showSuccess('Job deleted');
-        } catch (error) {
-            console.error('Error deleting job:', error);
-            showError('Failed to delete job');
-        }
-    }
-};
-
-window.openJobLink = function (url) {
-    chrome.tabs.create({ url: url });
-};
 
 /**
  * Utility functions
