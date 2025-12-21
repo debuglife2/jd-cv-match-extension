@@ -79,6 +79,9 @@ function setupEventListeners() {
     // Copy bullets
     document.getElementById('copyBulletsBtn').addEventListener('click', handleCopyBullets);
 
+    // Open tracker
+    document.getElementById('openTrackerBtn').addEventListener('click', handleOpenTracker);
+
     // Settings
     document.getElementById('settingsBtn').addEventListener('click', openSettings);
     document.getElementById('closeSettingsBtn').addEventListener('click', closeSettings);
@@ -407,6 +410,20 @@ async function handleSaveToTracker() {
     } catch (error) {
         console.error('Error saving to tracker:', error);
         showError('Failed to save to tracker: ' + error.message);
+    }
+}
+
+/**
+ * Handle open tracker button
+ */
+async function handleOpenTracker() {
+    try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        chrome.tabs.sendMessage(tab.id, { action: 'openTracker' });
+        window.close(); // Close popup after sending message
+    } catch (error) {
+        console.error('Error opening tracker:', error);
+        showError('Failed to open tracker. Make sure you\'re on a valid page.');
     }
 }
 

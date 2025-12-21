@@ -41,6 +41,9 @@
         initFloatingButton();
     });
 
+    // Global reference to showTrackerPanel function
+    let showTrackerPanelRef = null;
+
     function initFloatingButton() {
         // Create wrapper to keep hover state
         const wrapper = document.createElement('div');
@@ -418,6 +421,9 @@
             });
         }
 
+        // Store reference to showTrackerPanel for external access
+        showTrackerPanelRef = showTrackerPanel;
+
         // Build tracker panel HTML
         function buildTrackerPanelHTML(tracker) {
             // Group jobs by status
@@ -675,6 +681,22 @@
                 }
             }
             sendResponse({ success: true });
+        } else if (request.action === 'openTracker') {
+            // Open tracker panel
+            if (showTrackerPanelRef) {
+                showTrackerPanelRef();
+                sendResponse({ success: true });
+            } else {
+                // Initialize if not already done
+                initFloatingButton();
+                // Try again after a short delay
+                setTimeout(() => {
+                    if (showTrackerPanelRef) {
+                        showTrackerPanelRef();
+                    }
+                }, 100);
+                sendResponse({ success: true });
+            }
         }
     });
 
