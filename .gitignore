@@ -1,5 +1,9 @@
 # Chrome Extension .gitignore
 
+# Build output
+dist/
+node_modules/
+
 # Private data - NEVER commit these
 *.pem
 *.crx

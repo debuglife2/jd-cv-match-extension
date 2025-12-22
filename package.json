@@ -1,0 +1,19 @@
+{
+    "name": "jd-cv-match-extension",
+    "version": "1.0.0",
+    "description": "A Chrome Extension (Manifest V3) that analyzes job descriptions against your CV using Azure OpenAI, providing match scores, gap analysis, and tailored CV bullet points.",
+    "type": "module",
+    "scripts": {
+        "build": "vite build",
+        "dev": "vite build --watch",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+        "@vitejs/plugin-basic-ssl": "^2.1.0",
+        "pdfjs-dist": "^5.4.449",
+        "vite": "^7.3.0"
+    }
+}

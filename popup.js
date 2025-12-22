@@ -1,6 +1,7 @@
 // Main popup script
 import * as storage from './storage.js';
 import { analyzeJDWithCV, testConnection } from './azureOpenAI.js';
+import { extractTextFromPDF, cacheParsedPDF, getCachedPDF } from './pdfParser.js';
 
 // State
 let currentPageContent = null;
@@ -18,7 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function initializeUI() {
     // Check if CV is uploaded
     const cvText = await storage.getCVText();
-    updateCVStatus(cvText);
+    await updateCVStatus(cvText);
 
     // Load current tab info
     await loadCurrentTabInfo();
@@ -27,13 +28,23 @@ async function initializeUI() {
 /**
  * Update CV status display
  */
-function updateCVStatus(cvText) {
+async function updateCVStatus(cvText) {
     const cvStatusEl = document.getElementById('cvStatus');
     const clearCVBtn = document.getElementById('clearCVBtn');
 
     if (cvText && cvText.length > 0) {
         const wordCount = cvText.split(/\s+/).length;
-        cvStatusEl.textContent = `CV uploaded (${wordCount} words)`;
+
+        // Check if there's a cached PDF
+        const pdfCache = await getCachedPDF();
+        if (pdfCache) {
+            const uploadDate = new Date(pdfCache.parsedAt).toLocaleDateString();
+            cvStatusEl.innerHTML = `CV uploaded: <strong>${pdfCache.fileName}</strong><br>
+                <small>${wordCount} words • Uploaded ${uploadDate}</small>`;
+        } else {
+            cvStatusEl.textContent = `CV uploaded (${wordCount} words)`;
+        }
+
         cvStatusEl.style.color = '#10b981';
         if (clearCVBtn) clearCVBtn.style.display = 'inline-block';
     } else {
@@ -41,9 +52,7 @@ function updateCVStatus(cvText) {
         cvStatusEl.style.color = '#ef4444';
         if (clearCVBtn) clearCVBtn.style.display = 'none';
     }
-}
-
-/**
+}/**
  * Load current tab information
  */
 async function loadCurrentTabInfo() {
@@ -101,26 +110,49 @@ async function handleCVUpload(event) {
     if (!file) return;
 
     try {
-        const text = await readFileAsText(file);
+        showLoading(true, 'Uploading CV...');
+
+        let text;
+
+        if (file.name.endsWith('.pdf')) {
+            // Parse PDF using local pdf.js
+            text = await extractTextFromPDF(file);
+            // Cache the parsed PDF
+            await cacheParsedPDF(file.name, text);
+        } else if (file.name.endsWith('.txt')) {
+            // Read as plain text
+            text = await readFileAsText(file);
+        } else if (file.name.endsWith('.docx')) {
+            showError('DOCX format not yet supported. Please convert to PDF or TXT.');
+            showLoading(false);
+            event.target.value = '';
+            return;
+        } else {
+            showError('Unsupported file format. Please use PDF or TXT.');
+            showLoading(false);
+            event.target.value = '';
+            return;
+        }
 
         if (!text || text.trim().length < 50) {
             showError('CV file appears to be empty or too short');
+            showLoading(false);
             return;
         }
 
         await storage.saveCVText(text);
-        updateCVStatus(text);
-        showSuccess('CV uploaded successfully!');
+        await updateCVStatus(text);
+        showSuccess(`CV uploaded successfully! (${text.length} characters)`);
+        showLoading(false);
 
         // Reset file input
         event.target.value = '';
     } catch (error) {
         console.error('Error uploading CV:', error);
         showError('Failed to upload CV: ' + error.message);
+        showLoading(false);
     }
-}
-
-/**
+}/**
  * Read file as text
  */
 function readFileAsText(file) {
@@ -135,19 +167,7 @@ function readFileAsText(file) {
             reject(new Error('Failed to read file'));
         };
 
-        // For PDF and DOCX, we can only read text files directly
-        // For production, you'd need a library like pdf.js or mammoth.js
-        if (file.name.endsWith('.txt')) {
-            reader.readAsText(file);
-        } else if (file.name.endsWith('.pdf')) {
-            // For MVP, ask user to convert to text
-            reject(new Error('Please convert PDF to TXT format for now. PDF parsing will be added in a future update.'));
-        } else if (file.name.endsWith('.docx')) {
-            // For MVP, ask user to convert to text
-            reject(new Error('Please convert DOCX to TXT format for now. DOCX parsing will be added in a future update.'));
-        } else {
-            reader.readAsText(file);
-        }
+        reader.readAsText(file);
     });
 }
 
@@ -468,7 +488,7 @@ async function openSettings() {
 
     // Update CV status
     const cvText = await storage.getCVText();
-    updateCVStatus(cvText);
+    await updateCVStatus(cvText);
 
     modal.style.display = 'flex';
 }
@@ -590,8 +610,14 @@ async function handleClearCV() {
 /**
  * Utility functions
  */
-function showLoading(show) {
-    document.getElementById('loadingState').style.display = show ? 'block' : 'none';
+function showLoading(show, message = 'Analyzing job description...') {
+    const loadingState = document.getElementById('loadingState');
+    if (show) {
+        loadingState.querySelector('p').textContent = message;
+        loadingState.style.display = 'block';
+    } else {
+        loadingState.style.display = 'none';
+    }
     document.getElementById('analyzeBtn').disabled = show;
 }
 

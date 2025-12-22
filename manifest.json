@@ -29,7 +29,7 @@
                 "<all_urls>"
             ],
             "js": [
-                "contentScript.js",
+                "content.js",
                 "floatingButton.js"
             ],
             "css": [
@@ -42,5 +42,11 @@
         "16": "icons/icon16.svg",
         "48": "icons/icon48.svg",
         "128": "icons/icon128.svg"
-    }
+    },
+    "web_accessible_resources": [
+        {
+            "resources": ["pdf.worker.mjs"],
+            "matches": ["<all_urls>"]
+        }
+    ]
 }
