@@ -132,9 +132,31 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="apiKey">API Key <span style="color: #94a3b8; font-weight: normal;">(Optional for
-                                    testing)</span></label>
+                            <label for="apiKey">API Key <span style="color: #94a3b8; font-weight: normal;">(Optional -
+                                    use this OR Access Token)</span></label>
                             <input type="password" id="apiKey" placeholder="Your Azure OpenAI API key">
+                            <small>Key-based authentication (may be disabled on your resource)</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="accessToken">Access Token <span
+                                    style="color: #94a3b8; font-weight: normal;">(Optional - use this OR API
+                                    Key)</span></label>
+                            <input type="password" id="accessToken" placeholder="Your Azure AD access token">
+                            <small>Token-based authentication (required if key auth is disabled)</small>
+                            <details style="margin-top: 8px;">
+                                <summary style="cursor: pointer; color: #3b82f6; font-size: 12px;">How to get an Azure
+                                    AD token?</summary>
+                                <div
+                                    style="margin-top: 8px; padding: 8px; background: #f1f5f9; border-radius: 4px; font-size: 12px;">
+                                    <p style="margin: 0 0 8px 0;">Run this command in your terminal (requires Azure
+                                        CLI):</p>
+                                    <code
+                                        style="display: block; background: #1e293b; color: #e2e8f0; padding: 8px; border-radius: 4px; overflow-x: auto;">az account get-access-token --resource https://cognitiveservices.azure.com --query accessToken -o tsv</code>
+                                    <p style="margin: 8px 0 0 0; color: #64748b;">Note: Tokens expire after ~1 hour.
+                                        You'll need to refresh periodically.</p>
+                                </div>
+                            </details>
                         </div>
 
                         <div class="form-group">

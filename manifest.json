@@ -45,8 +45,12 @@
     },
     "web_accessible_resources": [
         {
-            "resources": ["pdf.worker.mjs"],
-            "matches": ["<all_urls>"]
+            "resources": [
+                "pdf.worker.mjs"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
         }
     ]
 }

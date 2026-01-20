@@ -209,8 +209,8 @@ async function handleAnalyze() {
     /* COMMENTED OUT: Real Azure settings validation
     // Check if settings are configured
     const settings = await storage.getSettings();
-    if (!settings || !settings.azureEndpoint || !settings.apiKey || !settings.deployment) {
-      showError('Please configure Azure OpenAI settings first');
+    if (!settings || !settings.azureEndpoint || (!settings.apiKey && !settings.accessToken) || !settings.deployment) {
+      showError('Please configure Azure OpenAI settings first (either API Key or Access Token required)');
       openSettings();
       return;
     }
@@ -236,7 +236,7 @@ async function handleAnalyze() {
         try {
             await chrome.scripting.executeScript({
                 target: { tabId: tab.id },
-                files: ['contentScript.js']
+                files: ['content.js']
             });
             console.log('Content script injected successfully');
             injectionSucceeded = true;
@@ -264,7 +264,7 @@ async function handleAnalyze() {
                 console.log('Retrying injection and message...');
                 await chrome.scripting.executeScript({
                     target: { tabId: tab.id },
-                    files: ['contentScript.js']
+                    files: ['content.js']
                 });
                 await new Promise(resolve => setTimeout(resolve, 500));
                 response = await chrome.tabs.sendMessage(tab.id, {
@@ -477,6 +477,7 @@ async function openSettings() {
     if (settings) {
         document.getElementById('azureEndpoint').value = settings.azureEndpoint || '';
         document.getElementById('apiKey').value = settings.apiKey || '';
+        document.getElementById('accessToken').value = settings.accessToken || '';
         document.getElementById('deployment').value = settings.deployment || '';
         document.getElementById('apiVersion').value = settings.apiVersion || '2024-02-15-preview';
     }
@@ -539,6 +540,7 @@ async function handleSaveSettings(event) {
     const settings = {
         azureEndpoint: document.getElementById('azureEndpoint').value.trim(),
         apiKey: document.getElementById('apiKey').value.trim(),
+        accessToken: document.getElementById('accessToken').value.trim(),
         deployment: document.getElementById('deployment').value.trim(),
         apiVersion: document.getElementById('apiVersion').value.trim()
     };
@@ -577,6 +579,7 @@ async function handleTestConnection() {
     const settings = {
         azureEndpoint: document.getElementById('azureEndpoint').value.trim(),
         apiKey: document.getElementById('apiKey').value.trim(),
+        accessToken: document.getElementById('accessToken').value.trim(),
         deployment: document.getElementById('deployment').value.trim(),
         apiVersion: document.getElementById('apiVersion').value.trim()
     };

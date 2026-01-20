@@ -15,5 +15,8 @@
         "@vitejs/plugin-basic-ssl": "^2.1.0",
         "pdfjs-dist": "^5.4.449",
         "vite": "^7.3.0"
+    },
+    "dependencies": {
+        "jspdf": "^4.0.0"
     }
 }

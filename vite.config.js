@@ -10,6 +10,7 @@ export default defineConfig({
                 'background/service_worker': resolve(__dirname, 'background/service_worker.js'),
                 content: resolve(__dirname, 'contentScript.js'),
                 floatingButton: resolve(__dirname, 'floatingButton.js'),
+                cvGenerator: resolve(__dirname, 'cvGenerator.js'),
                 pdfParser: resolve(__dirname, 'pdfParser.js'),
                 azureOpenAI: resolve(__dirname, 'azureOpenAI.js'),
             },

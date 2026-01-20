@@ -690,15 +690,24 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 12px;
+    gap: 12px;
 }
 
 .jd-cv-bullets-header p {
     margin: 0;
     font-size: 14px;
     color: #6b7280;
+    flex: 1;
 }
 
-.jd-cv-copy-bullets {
+.jd-cv-bullets-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.jd-cv-copy-bullets,
+.jd-cv-update-cv {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border: none;
@@ -708,11 +717,28 @@
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
+    white-space: nowrap;
 }
 
-.jd-cv-copy-bullets:hover {
+.jd-cv-update-cv {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.jd-cv-copy-bullets:hover,
+.jd-cv-update-cv:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.jd-cv-update-cv:hover {
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.jd-cv-copy-bullets:disabled,
+.jd-cv-update-cv:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
 }
 
 .jd-cv-bullet-list {

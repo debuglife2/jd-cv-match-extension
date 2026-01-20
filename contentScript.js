@@ -80,18 +80,22 @@ function extractPageContent() {
     // Try to extract job level (seniority)
     const jobLevel = extractJobLevel(pageTitle, mainText);
 
+    // Extract role title from page title (remove company and site name)
+    const roleTitle = extractRoleTitle(pageTitle, company);
+
     // Log extraction details
     console.log('========== CONTENT EXTRACTION ==========');
     console.log('Page Title:', pageTitle);
+    console.log('Role Title:', roleTitle || 'Not detected');
     console.log('Company:', company || 'Not detected');
     console.log('Job Level:', jobLevel || 'Not detected');
     console.log('Content Length:', mainText.length, 'chars');
-    console.log('Content:', mainText, 'chars');
     console.log('URL:', pageUrl);
     console.log('========================================');
 
     return {
         pageTitle,
+        roleTitle,
         pageUrl,
         mainText,
         company,
@@ -146,11 +150,45 @@ function cleanText(text) {
  * Attempt to extract company name from page
  */
 function extractCompanyName() {
-    // Try URL-based detection first (most reliable)
     const hostname = window.location.hostname;
+
+    // LinkedIn job pages - extract from page content first
+    if (hostname.includes('linkedin.com')) {
+        const linkedInPatterns = [
+            () => document.querySelector('.topcard__org-name-link')?.textContent,
+            () => document.querySelector('.topcard__flavor--black-link')?.textContent,
+            () => document.querySelector('.jobs-unified-top-card__company-name')?.textContent,
+            () => document.querySelector('[data-test-id="company-name"]')?.textContent,
+            () => document.querySelector('.job-details-jobs-unified-top-card__company-name')?.textContent,
+            () => {
+                // Extract from title: "Job Title | Company | LinkedIn"
+                const title = document.title;
+                const parts = title.split('|').map(p => p.trim());
+                if (parts.length >= 2 && parts[parts.length - 1].toLowerCase() === 'linkedin') {
+                    return parts[parts.length - 2];
+                }
+                return null;
+            }
+        ];
+
+        for (const pattern of linkedInPatterns) {
+            try {
+                const result = pattern();
+                if (result && result.trim().length > 0 && result.trim().length < 100) {
+                    const cleaned = cleanText(result.trim());
+                    if (cleaned.toLowerCase() !== 'linkedin') {
+                        return cleaned;
+                    }
+                }
+            } catch (e) {
+                // Continue to next pattern
+            }
+        }
+    }
+
+    // Try URL-based detection for company career pages
     const urlPatterns = [
         { pattern: /microsoft\.com/, name: 'Microsoft' },
-        { pattern: /linkedin\.com/, name: 'LinkedIn' },
         { pattern: /google\.com|careers\.google/, name: 'Google' },
         { pattern: /amazon\.jobs|amazon\.com\/jobs/, name: 'Amazon' },
         { pattern: /apple\.com/, name: 'Apple' },
@@ -196,11 +234,6 @@ function extractCompanyName() {
         () => document.getElementById('company')?.textContent,
         () => document.querySelector('[data-company]')?.getAttribute('data-company'),
 
-        // LinkedIn specific
-        () => document.querySelector('.topcard__org-name-link')?.textContent,
-        () => document.querySelector('.topcard__flavor--black-link')?.textContent,
-        () => document.querySelector('.jobs-unified-top-card__company-name')?.textContent,
-
         // Indeed specific
         () => document.querySelector('[data-company-name]')?.getAttribute('data-company-name'),
         () => document.querySelector('.icl-u-lg-mr--sm')?.textContent,
@@ -242,6 +275,41 @@ function extractCompanyName() {
     }
 
     return '';
+}
+
+/**
+ * Extract role title from page title
+ */
+function extractRoleTitle(pageTitle, company) {
+    if (!pageTitle) return 'Untitled';
+
+    let title = pageTitle;
+
+    // Remove common suffixes like " | LinkedIn", " - Careers", etc.
+    const suffixPatterns = [
+        /\s*[|\-]\s*LinkedIn\s*$/i,
+        /\s*[|\-]\s*Careers?\s*$/i,
+        /\s*[|\-]\s*Jobs?\s*$/i,
+        /\s*[|\-]\s*Employment\s*$/i,
+        /\s*[|\-]\s*Indeed\s*$/i,
+        /\s*[|\-]\s*Glassdoor\s*$/i,
+    ];
+
+    suffixPatterns.forEach(pattern => {
+        title = title.replace(pattern, '');
+    });
+
+    // If we have a company name, try to remove it from the title
+    if (company) {
+        // Pattern: "Job Title | Company" or "Job Title - Company"
+        const companyPattern = new RegExp(`\\s*[|\\-]\\s*${company.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i');
+        title = title.replace(companyPattern, '');
+    }
+
+    // Clean up any remaining separators at the end
+    title = title.replace(/\s*[|\-]\s*$/, '').trim();
+
+    return title || 'Untitled';
 }
 
 /**

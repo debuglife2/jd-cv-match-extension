@@ -10,6 +10,227 @@
     }
     window.jdCvFloatingButtonLoaded = true;
 
+    // ========== CV Generator Functions ==========
+
+    /**
+     * Generate and download an updated CV with tailored bullets using AI
+     */
+    async function generateAndDownloadCV(originalCV, tailoredBullets, jobInfo = {}) {
+        try {
+            // Call background script to use AI to update CV
+            const response = await sendMessageSafely({
+                action: 'updateCV',
+                originalCV: originalCV,
+                tailoredBullets: tailoredBullets,
+                jobInfo: jobInfo
+            });
+
+            if (!response.success) {
+                throw new Error(response.error || 'Failed to update CV');
+            }
+
+            const updatedCV = response.updatedCV;
+
+            // Generate PDF from the updated CV
+            const timestamp = new Date().toISOString().split('T')[0];
+            const jobSuffix = jobInfo.company ? `_${sanitizeFilename(jobInfo.company)}` : '';
+            const filename = `CV_Updated${jobSuffix}_${timestamp}.pdf`;
+
+            // Convert markdown CV to PDF
+            await generatePDFFromMarkdown(updatedCV, filename, jobInfo);
+
+            return { success: true, filename };
+        } catch (error) {
+            console.error('Error generating CV:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Generate PDF from markdown CV text
+     */
+    async function generatePDFFromMarkdown(markdownText, filename, jobInfo) {
+        // Create a nicely formatted HTML document
+        const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Updated CV</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 40px;
+            line-height: 1.6;
+            color: #1f2937;
+            background: white;
+        }
+        h1 {
+            font-size: 24pt;
+            font-weight: 800;
+            margin: 0 0 20px 0;
+            color: #111827;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        h2 {
+            font-size: 18pt;
+            font-weight: 700;
+            margin: 24px 0 12px 0;
+            color: #111827;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 6px;
+        }
+        h3 {
+            font-size: 14pt;
+            font-weight: 600;
+            margin: 16px 0 8px 0;
+            color: #374151;
+        }
+        p {
+            margin: 10px 0;
+            font-size: 11pt;
+        }
+        ul, ol {
+            margin: 10px 0;
+            padding-left: 24px;
+        }
+        li {
+            margin: 6px 0;
+            font-size: 11pt;
+        }
+        strong {
+            font-weight: 600;
+            color: #111827;
+        }
+        em {
+            font-style: italic;
+        }
+        .header-info {
+            text-align: center;
+            color: #6b7280;
+            font-size: 10pt;
+            margin-bottom: 30px;
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 8px;
+        }
+        @media print {
+            body {
+                margin: 0;
+                padding: 20px;
+            }
+            .no-print {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header-info no-print">
+        <strong>Updated CV</strong> - Generated on ${new Date().toLocaleDateString()}<br>
+        ${jobInfo.company ? `Tailored for <strong>${jobInfo.company}</strong>` : ''}
+        ${jobInfo.roleTitle ? ` - ${jobInfo.roleTitle}` : ''}
+    </div>
+    ${markdownToHTML(markdownText)}
+    <div class="no-print" style="margin-top: 40px; padding: 20px; background: #f3f4f6; border-radius: 8px; text-align: center;">
+        <p style="margin: 0 0 10px 0; font-size: 10pt; color: #6b7280;">
+            <strong>To save as PDF:</strong> Press Ctrl+P (Windows) or Cmd+P (Mac) and select "Save as PDF"
+        </p>
+    </div>
+</body>
+</html>`;
+
+        // Create blob and download as HTML (which can be easily printed to PDF)
+        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        
+        // Open in new tab with print dialog
+        const newWindow = window.open(url, '_blank');
+        
+        if (newWindow) {
+            newWindow.onload = function() {
+                // Auto-trigger print dialog after a short delay
+                setTimeout(() => {
+                    newWindow.print();
+                }, 500);
+            };
+        }
+        
+        // Cleanup after a delay
+        setTimeout(() => {
+            URL.revokeObjectURL(url);
+        }, 5000);
+    }
+
+    /**
+     * Load jsPDF library dynamically
+     */
+    async function loadJsPDF() {
+        return new Promise((resolve, reject) => {
+            if (window.jspdf) {
+                resolve(window.jspdf);
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+            script.onload = () => resolve(window.jspdf);
+            script.onerror = () => reject(new Error('Failed to load jsPDF'));
+            document.head.appendChild(script);
+        });
+    }
+
+    /**
+     * Simple markdown to HTML converter
+     */
+    function markdownToHTML(markdown) {
+        let html = markdown;
+
+        // Headers
+        html = html.replace(/^### (.+)$/gm, '<h3 style="font-size: 14pt; font-weight: 600; margin: 16px 0 8px 0; color: #1f2937;">$1</h3>');
+        html = html.replace(/^## (.+)$/gm, '<h2 style="font-size: 16pt; font-weight: 700; margin: 20px 0 10px 0; color: #111827; border-bottom: 2px solid #e5e7eb; padding-bottom: 4px;">$1</h2>');
+        html = html.replace(/^# (.+)$/gm, '<h1 style="font-size: 20pt; font-weight: 800; margin: 0 0 20px 0; color: #111827;">$1</h1>');
+
+        // Bold
+        html = html.replace(/\*\*(.+?)\*\*/g, '<strong style="font-weight: 600;">$1</strong>');
+
+        // Italic
+        html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+        // Lists
+        html = html.replace(/^\* (.+)$/gm, '<li style="margin: 4px 0;">$1</li>');
+        html = html.replace(/^- (.+)$/gm, '<li style="margin: 4px 0;">$1</li>');
+        html = html.replace(/(<li.*<\/li>)/s, '<ul style="margin: 8px 0; padding-left: 20px;">$1</ul>');
+
+        // Paragraphs
+        html = html.split('\n\n').map(para => {
+            if (para.trim() && !para.startsWith('<')) {
+                return `<p style="margin: 8px 0;">${para}</p>`;
+            }
+            return para;
+        }).join('\n');
+
+        // Line breaks
+        html = html.replace(/\n/g, '<br>');
+
+        return html;
+    }
+
+    /**
+     * Sanitize filename by removing invalid characters
+     */
+    function sanitizeFilename(name) {
+        return name
+            .replace(/[^a-z0-9_\-]/gi, '_')
+            .replace(/_+/g, '_')
+            .substring(0, 50);
+    }
+
+    // ========== End CV Generator Functions ==========
+
     // Helper function to safely send messages to background script
     async function sendMessageSafely(message) {
         try {
@@ -214,6 +435,10 @@
             const copyBtn = overlay.querySelector('.jd-cv-copy-bullets');
             copyBtn?.addEventListener('click', () => copyBullets(analysisData.tailored_bullets));
 
+            // Update CV handler
+            const updateCVBtn = overlay.querySelector('.jd-cv-update-cv');
+            updateCVBtn?.addEventListener('click', () => handleUpdateCV(analysisData));
+
             // Animate in
             setTimeout(() => overlay.classList.add('show'), 10);
         }
@@ -286,7 +511,10 @@
                         <h3>✨ Tailored CV Bullets</h3>
                         <div class="jd-cv-bullets-header">
                             <p>Use these bullets in your CV/resume:</p>
-                            <button class="jd-cv-copy-bullets">📋 Copy All</button>
+                            <div class="jd-cv-bullets-actions">
+                                <button class="jd-cv-copy-bullets">📋 Copy All</button>
+                                <button class="jd-cv-update-cv">📄 Update My CV</button>
+                            </div>
                         </div>
                         <ul class="jd-cv-bullet-list">
                             ${data.tailored_bullets.map(bullet => `<li>${escapeHtml(bullet)}</li>`).join('')}
@@ -420,6 +648,58 @@
                     }, 2000);
                 }
             });
+        }
+
+        // Handle Update CV button click
+        async function handleUpdateCV(analysisData) {
+            const btn = document.querySelector('.jd-cv-update-cv');
+            if (!btn) return;
+
+            const originalText = btn.textContent;
+            btn.textContent = '⏳ Generating...';
+            btn.disabled = true;
+
+            try {
+                // Get the user's CV from storage
+                const storage = await chrome.storage.local.get(['cvText']);
+
+                if (!storage.cvText) {
+                    showError('No CV found. Please upload your CV in the extension popup first.');
+                    return;
+                }
+
+                // Extract job info from the current page
+                const jobInfo = {
+                    company: analysisData.company,
+                    roleTitle: analysisData.roleTitle,
+                    pageUrl: window.location.href
+                };
+
+                // Generate and download the updated CV
+                const result = await generateAndDownloadCV(
+                    storage.cvText,
+                    analysisData.tailored_bullets,
+                    jobInfo
+                );
+
+                // Show success feedback
+                btn.textContent = '✅ Downloaded!';
+                btn.style.background = '#10b981';
+
+                showSuccessToast(`📥 CV updated and downloaded as ${result.filename}!`);
+
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '';
+                    btn.disabled = false;
+                }, 3000);
+            } catch (error) {
+                console.error('Error updating CV:', error);
+                showError('Failed to generate updated CV. Please try again.');
+
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
         }
 
         // Escape HTML

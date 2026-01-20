@@ -2,7 +2,7 @@
 // Handles extension lifecycle and messaging
 
 // Import Azure OpenAI module
-import { analyzeJDWithCV } from '../azureOpenAI.js';
+import { analyzeJDWithCV, updateCVWithTailoredBullets } from '../azureOpenAI.js';
 
 // Listen for extension installation
 chrome.runtime.onInstalled.addListener((details) => {
@@ -117,6 +117,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             .catch(error => sendResponse({ success: false, error: error.message }));
         return true;
     }
+
+    if (request.action === 'updateCV') {
+        // Request to update CV with tailored bullets
+        handleUpdateCV(request.originalCV, request.tailoredBullets, request.jobInfo)
+            .then(updatedCV => sendResponse({ success: true, updatedCV }))
+            .catch(error => sendResponse({ success: false, error: error.message }));
+        return true;
+    }
 });
 
 /**
@@ -127,7 +135,7 @@ async function handleExtractFromTab(tabId) {
         // Inject content script if not already present
         await chrome.scripting.executeScript({
             target: { tabId: tabId },
-            files: ['contentScript.js']
+            files: ['content.js']
         });
 
         // Send message to content script to extract content
@@ -240,13 +248,13 @@ async function handleSaveToTracker(tab) {
         // 3. Create job entry
         const job = {
             id: Date.now().toString(),
-            company: content.company,
-            title: content.title,
+            company: content.company || 'Unknown Company',
+            roleTitle: content.roleTitle || content.pageTitle || 'Untitled',
+            pageTitle: content.pageTitle,
             url: tab.url,
             status: 'Inbox',
-            appliedDate: new Date().toISOString().split('T')[0],
             notes: '',
-            lastUpdated: new Date().toISOString()
+            updatedAtUtc: new Date().toISOString()
         };
 
         // 4. Check for duplicates
@@ -278,6 +286,29 @@ async function handleSaveToTracker(tab) {
         return job;
     } catch (error) {
         console.error('Error saving to tracker:', error);
+        throw error;
+    }
+}
+
+/**
+ * Handle update CV request
+ */
+async function handleUpdateCV(originalCV, tailoredBullets, jobInfo) {
+    try {
+        // Get settings
+        const storage = await chrome.storage.local.get(['settings']);
+        const settings = storage.settings;
+
+        if (!settings || !settings.azureEndpoint || (!settings.apiKey && !settings.accessToken)) {
+            throw new Error('Azure OpenAI not configured. Please configure in settings.');
+        }
+
+        // Call AI to update CV
+        const updatedCV = await updateCVWithTailoredBullets(settings, originalCV, tailoredBullets, jobInfo);
+
+        return updatedCV;
+    } catch (error) {
+        console.error('Error updating CV:', error);
         throw error;
     }
 }
