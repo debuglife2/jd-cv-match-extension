@@ -1,6 +1,10 @@
 // Azure OpenAI client module
 // Handles all Azure OpenAI API calls
 
+// Production mode - disable console logging
+const PRODUCTION = true;
+const log = PRODUCTION ? () => { } : console.log.bind(console);
+
 /**
  * Call Azure OpenAI Chat Completions API
  * @param {Object} settings - Azure OpenAI settings {azureEndpoint, apiKey, accessToken, deployment, apiVersion}
@@ -9,10 +13,15 @@
  * @returns {Promise<Object>} Structured analysis result
  */
 async function analyzeJDWithCV(settings, cvText, jdText) {
-    const { azureEndpoint, apiKey, accessToken, deployment, apiVersion = '2024-02-15-preview' } = settings;
+    const { azureEndpoint, apiKey, accessToken, deployment, apiVersion = '2024-04-01-preview' } = settings;
 
     if (!azureEndpoint || (!apiKey && !accessToken) || !deployment) {
         throw new Error('Missing Azure OpenAI settings. Please configure in Settings with either API Key or Access Token.');
+    }
+
+    // Security: Validate HTTPS
+    if (!azureEndpoint.startsWith('https://')) {
+        throw new Error('Azure endpoint must use HTTPS for security.');
     }
 
     // Construct Azure OpenAI endpoint
@@ -79,7 +88,9 @@ async function analyzeJDWithCV(settings, cvText, jdText) {
         if (accessToken) {
             headers['Authorization'] = `Bearer ${accessToken}`;
         } else if (apiKey) {
+            // Support both old and new Azure OpenAI resource types
             headers['api-key'] = apiKey;
+            headers['Ocp-Apim-Subscription-Key'] = apiKey;
         }
 
         const response = await fetch(url, {
@@ -90,8 +101,7 @@ async function analyzeJDWithCV(settings, cvText, jdText) {
                     { role: 'system', content: systemPrompt },
                     { role: 'user', content: userPrompt }
                 ],
-                temperature: 0.7,
-                max_tokens: 2000,
+                max_completion_tokens: 2000,
                 response_format: { type: 'json_object' }
             })
         });
@@ -107,20 +117,25 @@ async function analyzeJDWithCV(settings, cvText, jdText) {
             throw new Error('Unexpected response format from Azure OpenAI');
         }
 
+        // Track token usage
+        if (data.usage) {
+            await trackTokenUsage(data.usage);
+        }
+
         const content = data.choices[0].message.content;
 
-        console.log('Azure OpenAI raw response:', content);
+        log('Azure OpenAI raw response:', content);
 
         // Parse the JSON response
         let result;
         try {
             result = JSON.parse(content);
         } catch (parseError) {
-            console.error('Failed to parse Azure OpenAI response:', content);
+            log('Failed to parse Azure OpenAI response:', content);
             throw new Error('Failed to parse Azure OpenAI response as JSON');
         }
 
-        console.log('Parsed result:', result);
+        log('Parsed result:', result);
 
         // Validate the response structure with detailed logging
         const missingFields = [];
@@ -131,8 +146,8 @@ async function analyzeJDWithCV(settings, cvText, jdText) {
         if (!result.tailored_bullets) missingFields.push('tailored_bullets');
 
         if (missingFields.length > 0) {
-            console.error('Missing fields:', missingFields);
-            console.error('Received structure:', Object.keys(result));
+            log('Missing fields:', missingFields);
+            log('Received structure:', Object.keys(result));
             throw new Error(`Invalid response structure from Azure OpenAI. Missing: ${missingFields.join(', ')}`);
         }
 
@@ -148,7 +163,7 @@ async function analyzeJDWithCV(settings, cvText, jdText) {
  * Test Azure OpenAI connection
  */
 async function testConnection(settings) {
-    const { azureEndpoint, apiKey, accessToken, deployment, apiVersion = '2024-02-15-preview' } = settings;
+    const { azureEndpoint, apiKey, accessToken, deployment, apiVersion = '2024-04-01-preview' } = settings;
 
     const url = `${azureEndpoint.replace(/\/$/, '')}/openai/deployments/${deployment}/chat/completions?api-version=${apiVersion}`;
 
@@ -162,7 +177,9 @@ async function testConnection(settings) {
         if (accessToken) {
             headers['Authorization'] = `Bearer ${accessToken}`;
         } else if (apiKey) {
+            // Support both old and new Azure OpenAI resource types
             headers['api-key'] = apiKey;
+            headers['Ocp-Apim-Subscription-Key'] = apiKey;
         }
 
         const response = await fetch(url, {
@@ -172,7 +189,7 @@ async function testConnection(settings) {
                 messages: [
                     { role: 'user', content: 'Hello' }
                 ],
-                max_tokens: 10
+                max_completion_tokens: 10
             })
         });
 
@@ -192,8 +209,85 @@ async function testConnection(settings) {
 export {
     analyzeJDWithCV,
     testConnection,
-    updateCVWithTailoredBullets
+    updateCVWithTailoredBullets,
+    getTokenUsageStats
 };
+
+/**
+ * Track token usage from API response
+ * @param {Object} usage - Usage object from Azure OpenAI response
+ */
+async function trackTokenUsage(usage) {
+    try {
+        const stats = await chrome.storage.local.get(['tokenUsage']);
+        const currentUsage = stats.tokenUsage || {
+            totalInputTokens: 0,
+            totalCachedTokens: 0,
+            totalOutputTokens: 0,
+            totalCost: 0,
+            requestCount: 0,
+            lastUpdated: null
+        };
+
+        // Extract token counts
+        const promptTokens = usage.prompt_tokens || 0;
+        const cachedTokens = usage.prompt_tokens_details?.cached_tokens || 0;
+        const completionTokens = usage.completion_tokens || 0;
+
+        // Calculate costs (per 1M tokens)
+        const INPUT_COST_PER_M = 1.75;
+        const CACHED_COST_PER_M = 0.175;
+        const OUTPUT_COST_PER_M = 14.00;
+
+        const inputCost = (promptTokens - cachedTokens) * INPUT_COST_PER_M / 1000000;
+        const cachedCost = cachedTokens * CACHED_COST_PER_M / 1000000;
+        const outputCost = completionTokens * OUTPUT_COST_PER_M / 1000000;
+        const requestCost = inputCost + cachedCost + outputCost;
+
+        // Update totals
+        currentUsage.totalInputTokens += (promptTokens - cachedTokens);
+        currentUsage.totalCachedTokens += cachedTokens;
+        currentUsage.totalOutputTokens += completionTokens;
+        currentUsage.totalCost += requestCost;
+        currentUsage.requestCount += 1;
+        currentUsage.lastUpdated = new Date().toISOString();
+
+        await chrome.storage.local.set({ tokenUsage: currentUsage });
+
+        log('📊 Token Usage Updated:', {
+            thisRequest: {
+                input: promptTokens - cachedTokens,
+                cached: cachedTokens,
+                output: completionTokens,
+                cost: `$${requestCost.toFixed(4)}`
+            },
+            totals: {
+                input: currentUsage.totalInputTokens,
+                cached: currentUsage.totalCachedTokens,
+                output: currentUsage.totalOutputTokens,
+                cost: `$${currentUsage.totalCost.toFixed(4)}`,
+                requests: currentUsage.requestCount
+            }
+        });
+    } catch (error) {
+        log('Error tracking token usage:', error);
+    }
+}
+
+/**
+ * Get token usage statistics
+ */
+async function getTokenUsageStats() {
+    const stats = await chrome.storage.local.get(['tokenUsage']);
+    return stats.tokenUsage || {
+        totalInputTokens: 0,
+        totalCachedTokens: 0,
+        totalOutputTokens: 0,
+        totalCost: 0,
+        requestCount: 0,
+        lastUpdated: null
+    };
+}
 
 /**
  * Update CV by intelligently incorporating tailored bullet points
@@ -204,7 +298,7 @@ export {
  * @returns {Promise<string>} Updated CV text in markdown format
  */
 async function updateCVWithTailoredBullets(settings, originalCV, tailoredBullets, jobInfo = {}) {
-    const { azureEndpoint, apiKey, accessToken, deployment, apiVersion = '2024-02-15-preview' } = settings;
+    const { azureEndpoint, apiKey, accessToken, deployment, apiVersion = '2024-04-01-preview' } = settings;
 
     if (!azureEndpoint || (!apiKey && !accessToken) || !deployment) {
         throw new Error('Missing Azure OpenAI settings.');
@@ -242,7 +336,9 @@ Return the complete updated CV in markdown format. Incorporate the tailored bull
     };
 
     if (apiKey) {
+        // Support both old and new Azure OpenAI resource types
         headers['api-key'] = apiKey;
+        headers['Ocp-Apim-Subscription-Key'] = apiKey;
     } else if (accessToken) {
         headers['Authorization'] = `Bearer ${accessToken}`;
     }
@@ -256,8 +352,7 @@ Return the complete updated CV in markdown format. Incorporate the tailored bull
                     { role: 'system', content: systemPrompt },
                     { role: 'user', content: userPrompt }
                 ],
-                max_tokens: 3000,
-                temperature: 0.7
+                max_completion_tokens: 3000
             })
         });
 
@@ -267,6 +362,12 @@ Return the complete updated CV in markdown format. Incorporate the tailored bull
         }
 
         const data = await response.json();
+
+        // Track token usage
+        if (data.usage) {
+            await trackTokenUsage(data.usage);
+        }
+
         const updatedCV = data.choices[0]?.message?.content;
 
         if (!updatedCV) {

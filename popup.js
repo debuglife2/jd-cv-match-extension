@@ -1,17 +1,155 @@
 // Main popup script
 import * as storage from './storage.js';
-import { analyzeJDWithCV, testConnection } from './azureOpenAI.js';
 import { extractTextFromPDF, cacheParsedPDF, getCachedPDF } from './pdfParser.js';
+import * as apiClient from './apiClient.js';
+
+// Production mode - set to true to disable console logging
+const PRODUCTION = false; // TEMPORARILY FALSE FOR DEBUGGING
+const log = PRODUCTION ? () => { } : console.log.bind(console);
 
 // State
 let currentPageContent = null;
 let currentAnalysis = null;
+let currentUser = null;
 
 // Initialize popup
 document.addEventListener('DOMContentLoaded', async () => {
-    await initializeUI();
+    await checkAuthAndInitialize();
     setupEventListeners();
 });
+
+/**
+ * Check authentication status and initialize appropriate UI
+ */
+async function checkAuthAndInitialize() {
+    try {
+        console.log('Checking auth status...');
+        const isLoggedIn = await apiClient.isLoggedIn();
+        console.log('isLoggedIn:', isLoggedIn);
+
+        if (isLoggedIn) {
+            currentUser = await apiClient.getUser();
+            console.log('currentUser:', currentUser);
+            showMainApp();
+            await initializeUI();
+            try {
+                await updateUsageBar();
+            } catch (usageError) {
+                console.error('Usage bar error:', usageError);
+            }
+        } else {
+            showSignInScreen();
+        }
+    } catch (error) {
+        console.error('Auth check error:', error);
+        showSignInScreen();
+    }
+}
+
+/**
+ * Show sign-in screen, hide main app
+ */
+function showSignInScreen() {
+    document.getElementById('signInScreen').style.display = 'flex';
+    document.getElementById('mainApp').style.display = 'none';
+}
+
+/**
+ * Show main app, hide sign-in screen
+ */
+function showMainApp() {
+    document.getElementById('signInScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+
+    // Update user info display
+    if (currentUser) {
+        const userInfo = document.getElementById('userInfo');
+        const userAvatar = document.getElementById('userAvatar');
+        const userName = document.getElementById('userName');
+
+        if (currentUser.picture) {
+            userAvatar.src = currentUser.picture;
+            userAvatar.alt = currentUser.name || 'User';
+            userAvatar.style.display = 'block';
+        } else {
+            userAvatar.style.display = 'none';
+        }
+
+        userName.textContent = currentUser.name ? currentUser.name.split(' ')[0] : 'User';
+        userInfo.style.display = 'flex';
+    }
+}
+
+/**
+ * Handle Google Sign In
+ */
+async function handleGoogleSignIn() {
+    const btn = document.getElementById('googleSignInBtn');
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-small"></span> Signing in...';
+    btn.disabled = true;
+
+    try {
+        console.log('Starting Google Sign In...');
+        currentUser = await apiClient.signInWithGoogle();
+        console.log('Sign in successful:', currentUser);
+        showMainApp();
+        await initializeUI();
+        await updateUsageBar();
+        showSuccess('Signed in successfully!');
+    } catch (error) {
+        console.error('Sign in error:', error);
+        showError('Sign in failed: ' + error.message);
+    } finally {
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+    }
+}
+
+/**
+ * Handle Sign Out
+ */
+async function handleSignOut() {
+    try {
+        await apiClient.signOut();
+        currentUser = null;
+        showSignInScreen();
+    } catch (error) {
+        log('Sign out error:', error);
+    }
+}
+
+/**
+ * Update usage bar display
+ */
+async function updateUsageBar() {
+    try {
+        const usage = await apiClient.getUsage();
+
+        const usageCount = document.getElementById('usageCount');
+        const usageProgress = document.getElementById('usageProgress');
+        const usageBar = document.getElementById('usageBar');
+
+        const used = usage.used || 0;
+        const limit = usage.limit || 10;
+        const percentage = Math.min((used / limit) * 100, 100);
+
+        usageCount.textContent = usage.tier === 'pro' ? `${used} used (Unlimited)` : `${used}/${limit}`;
+        usageProgress.style.width = `${percentage}%`;
+
+        // Update progress bar color based on usage
+        usageProgress.classList.remove('warning', 'danger');
+        if (percentage >= 90) {
+            usageProgress.classList.add('danger');
+        } else if (percentage >= 70) {
+            usageProgress.classList.add('warning');
+        }
+
+        usageBar.style.display = 'flex';
+    } catch (error) {
+        log('Error updating usage bar:', error);
+    }
+}
 
 /**
  * Initialize UI state
@@ -72,6 +210,9 @@ async function loadCurrentTabInfo() {
  * Setup all event listeners
  */
 function setupEventListeners() {
+    // Google Sign In
+    document.getElementById('googleSignInBtn').addEventListener('click', handleGoogleSignIn);
+
     // CV Upload
     document.getElementById('uploadCVBtn').addEventListener('click', () => {
         document.getElementById('cvFileInput').click();
@@ -95,11 +236,13 @@ function setupEventListeners() {
     document.getElementById('settingsBtn').addEventListener('click', openSettings);
     document.getElementById('closeSettingsBtn').addEventListener('click', closeSettings);
     document.getElementById('settingsForm').addEventListener('submit', handleSaveSettings);
-    document.getElementById('testConnectionBtn').addEventListener('click', handleTestConnection);
     document.getElementById('clearCVBtn')?.addEventListener('click', handleClearCV);
 
     // Floating button toggle - instant feedback
     document.getElementById('floatingButtonEnabled').addEventListener('change', handleFloatingButtonToggle);
+
+    // Sign out button (if exists)
+    document.getElementById('signOutBtn')?.addEventListener('click', handleSignOut);
 }
 
 /**
@@ -108,6 +251,14 @@ function setupEventListeners() {
 async function handleCVUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
+
+    // Security: Validate file size (max 10MB)
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX_FILE_SIZE) {
+        showError('File too large. Maximum size is 10MB.');
+        event.target.value = '';
+        return;
+    }
 
     try {
         showLoading(true, 'Uploading CV...');
@@ -198,23 +349,13 @@ async function handleAnalyze() {
         return;
     }
 
-    // TEMPORARY: Skip Azure settings check for testing with mock data
-    // Get settings anyway (can be empty/dummy for mock)
-    const settings = await storage.getSettings() || {
-        azureEndpoint: 'mock',
-        apiKey: 'mock',
-        deployment: 'mock'
-    };
-
-    /* COMMENTED OUT: Real Azure settings validation
-    // Check if settings are configured
-    const settings = await storage.getSettings();
-    if (!settings || !settings.azureEndpoint || (!settings.apiKey && !settings.accessToken) || !settings.deployment) {
-      showError('Please configure Azure OpenAI settings first (either API Key or Access Token required)');
-      openSettings();
-      return;
+    // Check if user is logged in
+    const isLoggedIn = await apiClient.isLoggedIn();
+    if (!isLoggedIn) {
+        showError('Please sign in to analyze job descriptions.');
+        showSignInScreen();
+        return;
     }
-    */
 
     // Show loading state
     showLoading(true);
@@ -229,7 +370,7 @@ async function handleAnalyze() {
             throw new Error('No active tab found');
         }
 
-        console.log('Attempting to inject content script into tab:', tab.id, tab.url);
+        log('Attempting to inject content script into tab:', tab.id, tab.url);
 
         // Ensure content script is injected before sending message
         let injectionSucceeded = false;
@@ -238,10 +379,10 @@ async function handleAnalyze() {
                 target: { tabId: tab.id },
                 files: ['content.js']
             });
-            console.log('Content script injected successfully');
+            log('Content script injected successfully');
             injectionSucceeded = true;
         } catch (injectionError) {
-            console.log('Content script injection error:', injectionError);
+            log('Content script injection error:', injectionError);
             // Script might already be injected, try to send message anyway
         }
 
@@ -251,17 +392,17 @@ async function handleAnalyze() {
         // Extract page content
         let response;
         try {
-            console.log('Sending message to tab:', tab.id);
+            log('Sending message to tab:', tab.id);
             response = await chrome.tabs.sendMessage(tab.id, {
                 action: 'extractPageContent'
             });
-            console.log('Received response:', response);
+            log('Received response:', response);
         } catch (messageError) {
-            console.error('Message sending failed:', messageError);
+            log('Message sending failed:', messageError);
 
             // Try one more time after injecting with a longer delay
             try {
-                console.log('Retrying injection and message...');
+                log('Retrying injection and message...');
                 await chrome.scripting.executeScript({
                     target: { tabId: tab.id },
                     files: ['content.js']
@@ -270,9 +411,9 @@ async function handleAnalyze() {
                 response = await chrome.tabs.sendMessage(tab.id, {
                     action: 'extractPageContent'
                 });
-                console.log('Retry successful:', response);
+                log('Retry successful:', response);
             } catch (retryError) {
-                console.error('Retry failed:', retryError);
+                log('Retry failed:', retryError);
                 throw new Error('Failed to communicate with page. This can happen on Chrome internal pages (chrome://, chrome-extension://). Please try on a regular website.');
             }
         }
@@ -287,15 +428,14 @@ async function handleAnalyze() {
 
         currentPageContent = response.content;
 
-        // Log extracted content details
-        console.log('========== EXTRACTED PAGE CONTENT ==========');
-        console.log('Company:', currentPageContent.company || 'Not found');
-        console.log('Page Title:', currentPageContent.pageTitle);
-        console.log('URL:', currentPageContent.pageUrl);
-        console.log('Main Text Length:', currentPageContent.mainText?.length || 0, 'characters');
-        console.log('Main Text Preview:', currentPageContent.mainText?.substring(0, 200) + '...');
-        console.log('Extracted At:', currentPageContent.extractedAt);
-        console.log('==========================================');
+        // Log extracted content details (only in dev mode)
+        log('========== EXTRACTED PAGE CONTENT ==========');
+        log('Company:', currentPageContent.company || 'Not found');
+        log('Page Title:', currentPageContent.pageTitle);
+        log('URL:', currentPageContent.pageUrl);
+        log('Main Text Length:', currentPageContent.mainText?.length || 0, 'characters');
+        log('Extracted At:', currentPageContent.extractedAt);
+        log('==========================================');
 
         // Check if extracted text is substantial
         if (!currentPageContent.mainText || currentPageContent.mainText.length < 100) {
@@ -306,21 +446,22 @@ async function handleAnalyze() {
 
         // Check cache first
         const cacheKey = generateCacheKey(cvText, currentPageContent.mainText);
-        console.log('🔑 Generated cache key:', cacheKey);
+        log('🔑 Generated cache key:', cacheKey);
 
         const { analysisCache = {} } = await chrome.storage.local.get('analysisCache');
         const cachedResult = analysisCache[cacheKey];
 
         let analysis;
         if (cachedResult && cachedResult.analysis) {
-            console.log('✅ Using cached analysis from', new Date(cachedResult.timestamp).toLocaleString());
-            console.log('   Cached job URL:', cachedResult.jobUrl);
+            log('✅ Using cached analysis from', new Date(cachedResult.timestamp).toLocaleString());
+            log('   Cached job URL:', cachedResult.jobUrl);
             analysis = cachedResult.analysis;
         } else {
-            console.log('🔄 No cache found, calling Azure OpenAI...');
+            log('🔄 No cache found, calling backend API...');
 
-            // Call Azure OpenAI
-            analysis = await analyzeJDWithCV(settings, cvText, currentPageContent.mainText);
+            // Call backend API
+            const result = await apiClient.analyzeJob(cvText, currentPageContent.mainText, currentPageContent.pageUrl);
+            analysis = result.analysis;
 
             // Store in cache
             analysisCache[cacheKey] = {
@@ -339,11 +480,14 @@ async function handleAnalyze() {
                 for (let i = 0; i < entriesToRemove; i++) {
                     delete analysisCache[cacheEntries[i][0]];
                 }
-                console.log(`🧹 Removed ${entriesToRemove} old cache entries, keeping 50 most recent`);
+                log(`🧹 Removed ${entriesToRemove} old cache entries, keeping 50 most recent`);
             }
 
             await chrome.storage.local.set({ analysisCache });
-            console.log('💾 Analysis cached with key:', cacheKey);
+            log('💾 Analysis cached with key:', cacheKey);
+
+            // Update usage bar after successful analysis
+            await updateUsageBar();
         }
 
         currentAnalysis = analysis;
@@ -472,14 +616,18 @@ async function handleCopyBullets() {
  */
 async function openSettings() {
     const modal = document.getElementById('settingsModal');
-    const settings = await storage.getSettings();
 
-    if (settings) {
-        document.getElementById('azureEndpoint').value = settings.azureEndpoint || '';
-        document.getElementById('apiKey').value = settings.apiKey || '';
-        document.getElementById('accessToken').value = settings.accessToken || '';
-        document.getElementById('deployment').value = settings.deployment || '';
-        document.getElementById('apiVersion').value = settings.apiVersion || '2024-02-15-preview';
+    // Update user account info
+    if (currentUser) {
+        const avatar = document.getElementById('settingsUserAvatar');
+        if (currentUser.picture) {
+            avatar.src = currentUser.picture;
+            avatar.style.display = 'block';
+        } else {
+            avatar.style.display = 'none';
+        }
+        document.getElementById('settingsUserName').textContent = currentUser.name || 'User';
+        document.getElementById('settingsUserEmail').textContent = currentUser.email || '';
     }
 
     // Load floating button preference
@@ -491,7 +639,41 @@ async function openSettings() {
     const cvText = await storage.getCVText();
     await updateCVStatus(cvText);
 
+    // Update usage stats in settings
+    await updateSettingsUsageInfo();
+
     modal.style.display = 'flex';
+}
+
+/**
+ * Update usage info in settings modal
+ */
+async function updateSettingsUsageInfo() {
+    try {
+        const usage = await apiClient.getUsage();
+        const container = document.getElementById('settingsUsageInfo');
+
+        const tierLabel = usage.tier === 'pro' ? '⭐ Pro' : '🆓 Free';
+        const limitText = usage.tier === 'pro' ? 'Unlimited' : `${usage.limit} per month`;
+
+        container.innerHTML = `
+            <div class="usage-stat-row">
+                <span>Plan:</span>
+                <span class="stat-value">${tierLabel}</span>
+            </div>
+            <div class="usage-stat-row">
+                <span>Used this month:</span>
+                <span class="stat-value">${usage.used || 0}</span>
+            </div>
+            <div class="usage-stat-row">
+                <span>Limit:</span>
+                <span class="stat-value">${limitText}</span>
+            </div>
+        `;
+    } catch (error) {
+        log('Error loading usage info:', error);
+        document.getElementById('settingsUsageInfo').innerHTML = '<p>Unable to load usage info</p>';
+    }
 }
 
 /**
@@ -499,7 +681,6 @@ async function openSettings() {
  */
 function closeSettings() {
     document.getElementById('settingsModal').style.display = 'none';
-    document.getElementById('connectionTestResult').style.display = 'none';
 }
 
 /**
@@ -525,9 +706,9 @@ async function handleFloatingButtonToggle(event) {
             }
         }
 
-        console.log('Floating button toggled:', enabled);
+        log('Floating button toggled:', enabled);
     } catch (error) {
-        console.error('Error toggling floating button:', error);
+        log('Error toggling floating button:', error);
     }
 }
 
@@ -537,18 +718,9 @@ async function handleFloatingButtonToggle(event) {
 async function handleSaveSettings(event) {
     event.preventDefault();
 
-    const settings = {
-        azureEndpoint: document.getElementById('azureEndpoint').value.trim(),
-        apiKey: document.getElementById('apiKey').value.trim(),
-        accessToken: document.getElementById('accessToken').value.trim(),
-        deployment: document.getElementById('deployment').value.trim(),
-        apiVersion: document.getElementById('apiVersion').value.trim()
-    };
-
     const floatingButtonEnabled = document.getElementById('floatingButtonEnabled').checked;
 
     try {
-        await storage.saveSettings(settings);
         await chrome.storage.local.set({ floatingButtonEnabled });
 
         // Send message to all tabs to reload floating button
@@ -564,38 +736,11 @@ async function handleSaveSettings(event) {
             }
         }
 
-        showSuccess('Settings saved! Floating button ' + (floatingButtonEnabled ? 'enabled' : 'disabled') + '.');
+        showSuccess('Settings saved successfully!');
         setTimeout(() => closeSettings(), 1500);
     } catch (error) {
-        console.error('Error saving settings:', error);
+        log('Error saving settings:', error);
         showError('Failed to save settings: ' + error.message);
-    }
-}
-
-/**
- * Handle test connection
- */
-async function handleTestConnection() {
-    const settings = {
-        azureEndpoint: document.getElementById('azureEndpoint').value.trim(),
-        apiKey: document.getElementById('apiKey').value.trim(),
-        accessToken: document.getElementById('accessToken').value.trim(),
-        deployment: document.getElementById('deployment').value.trim(),
-        apiVersion: document.getElementById('apiVersion').value.trim()
-    };
-
-    const resultDiv = document.getElementById('connectionTestResult');
-    resultDiv.style.display = 'block';
-    resultDiv.textContent = 'Testing connection...';
-    resultDiv.className = '';
-
-    try {
-        await testConnection(settings);
-        resultDiv.textContent = '✅ Connection successful!';
-        resultDiv.className = 'success-message';
-    } catch (error) {
-        resultDiv.textContent = '❌ Connection failed: ' + error.message;
-        resultDiv.className = 'error-message';
     }
 }
 

@@ -2,14 +2,42 @@
     "manifest_version": 3,
     "name": "JD-CV Match Analyzer",
     "version": "1.0.0",
-    "description": "Analyze job descriptions against your CV and get tailored suggestions using Azure OpenAI",
+    "description": "Analyze job descriptions against your CV and get tailored suggestions using AI",
     "permissions": [
         "activeTab",
         "scripting",
-        "storage"
+        "storage",
+        "identity"
     ],
+    "oauth2": {
+        "client_id": "737539383779-8bc3aah7oc5oasb6tavc68kotv41elip.apps.googleusercontent.com",
+        "scopes": [
+            "https://www.googleapis.com/auth/userinfo.email",
+            "https://www.googleapis.com/auth/userinfo.profile"
+        ]
+    },
     "host_permissions": [
-        "<all_urls>"
+        "https://www.linkedin.com/*",
+        "https://linkedin.com/*",
+        "https://*.greenhouse.io/*",
+        "https://*.lever.co/*",
+        "https://*.workday.com/*",
+        "https://*.myworkdayjobs.com/*",
+        "https://*.icims.com/*",
+        "https://*.smartrecruiters.com/*",
+        "https://*.jobvite.com/*",
+        "https://careers.google.com/*",
+        "https://www.amazon.jobs/*",
+        "https://jobs.apple.com/*",
+        "https://careers.microsoft.com/*",
+        "https://www.metacareers.com/*",
+        "https://*.indeed.com/*",
+        "https://*.glassdoor.com/*",
+        "https://*.ziprecruiter.com/*",
+        "https://*.dice.com/*",
+        "https://*.monster.com/*",
+        "https://*.angel.co/*",
+        "https://*.wellfound.com/*"
     ],
     "action": {
         "default_popup": "popup.html",
@@ -26,7 +54,27 @@
     "content_scripts": [
         {
             "matches": [
-                "<all_urls>"
+                "https://www.linkedin.com/*",
+                "https://linkedin.com/*",
+                "https://*.greenhouse.io/*",
+                "https://*.lever.co/*",
+                "https://*.workday.com/*",
+                "https://*.myworkdayjobs.com/*",
+                "https://*.icims.com/*",
+                "https://*.smartrecruiters.com/*",
+                "https://*.jobvite.com/*",
+                "https://careers.google.com/*",
+                "https://www.amazon.jobs/*",
+                "https://jobs.apple.com/*",
+                "https://careers.microsoft.com/*",
+                "https://www.metacareers.com/*",
+                "https://*.indeed.com/*",
+                "https://*.glassdoor.com/*",
+                "https://*.ziprecruiter.com/*",
+                "https://*.dice.com/*",
+                "https://*.monster.com/*",
+                "https://*.angel.co/*",
+                "https://*.wellfound.com/*"
             ],
             "js": [
                 "content.js",
@@ -49,8 +97,13 @@
                 "pdf.worker.mjs"
             ],
             "matches": [
-                "<all_urls>"
+                "https://www.linkedin.com/*",
+                "https://*.greenhouse.io/*",
+                "https://*.lever.co/*"
             ]
         }
-    ]
+    ],
+    "content_security_policy": {
+        "extension_pages": "script-src 'self'; object-src 'none';"
+    }
 }

@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
-import { copyFileSync, mkdirSync, existsSync } from 'fs';
+import { copyFileSync, mkdirSync, existsSync, readFileSync, writeFileSync } from 'fs';
 
 export default defineConfig({
     build: {
@@ -13,6 +13,7 @@ export default defineConfig({
                 cvGenerator: resolve(__dirname, 'cvGenerator.js'),
                 pdfParser: resolve(__dirname, 'pdfParser.js'),
                 azureOpenAI: resolve(__dirname, 'azureOpenAI.js'),
+                config: resolve(__dirname, 'config.js'),
             },
             output: {
                 entryFileNames: '[name].js',
@@ -31,6 +32,40 @@ export default defineConfig({
         },
     },
     plugins: [
+        {
+            name: 'load-env-to-config',
+            buildStart() {
+                // Read .env file and generate config.js
+                try {
+                    const envPath = resolve(__dirname, '.env');
+                    const envContent = readFileSync(envPath, 'utf-8');
+                    const env = {};
+
+                    envContent.split('\n').forEach(line => {
+                        const [key, ...valueParts] = line.split('=');
+                        if (key && valueParts.length > 0) {
+                            env[key.trim()] = valueParts.join('=').trim();
+                        }
+                    });
+
+                    const configContent = `// Auto-generated from .env - DO NOT EDIT MANUALLY
+// This file is regenerated on each build
+
+export const DEFAULT_CONFIG = {
+    azureEndpoint: '${env.openai || ''}',
+    apiKey: '${env.openai_key || ''}',
+    deployment: '${env.openai_deployment || ''}',
+    apiVersion: '2024-04-01-preview'
+};
+`;
+
+                    writeFileSync(resolve(__dirname, 'config.js'), configContent);
+                    console.log('✓ Generated config.js from .env');
+                } catch (err) {
+                    console.error('⚠ Failed to generate config.js:', err.message);
+                }
+            }
+        },
         {
             name: 'copy-files',
             closeBundle() {

@@ -5,7 +5,6 @@
 
 #### Completed Features:
 - ✅ Full Chrome Extension (Manifest V3) structure
-- ✅ Mock Azure OpenAI mode (2s delay, 75% medium match) for testing
 - ✅ Floating round button (56px) on all pages with gradient background
 - ✅ Hover menu with 4 actions: Turn Off, Analyze Job, Add to Tracker, Open Tracker
 - ✅ Hover state maintenance using wrapper with padding bridge technique

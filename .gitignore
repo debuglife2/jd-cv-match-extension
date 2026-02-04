@@ -28,10 +28,13 @@ desktop.ini
 # Logs
 *.log
 
-# Environment files (if you add them later)
+# Environment files - NEVER commit these (contains API keys)
 .env
 .env.local
 .env.production
+
+# Generated config with embedded secrets - NEVER commit
+config.js
 
 # Build artifacts (if you add build process)
 dist/

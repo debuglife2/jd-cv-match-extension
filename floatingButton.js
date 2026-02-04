@@ -4,6 +4,10 @@
 (function () {
     'use strict';
 
+    // Production mode - disable console logging
+    const PRODUCTION = true;
+    const log = PRODUCTION ? () => { } : console.log.bind(console);
+
     // Avoid duplicate injection
     if (window.jdCvFloatingButtonLoaded) {
         return;
@@ -146,19 +150,19 @@
         // Create blob and download as HTML (which can be easily printed to PDF)
         const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
         const url = URL.createObjectURL(blob);
-        
+
         // Open in new tab with print dialog
         const newWindow = window.open(url, '_blank');
-        
+
         if (newWindow) {
-            newWindow.onload = function() {
+            newWindow.onload = function () {
                 // Auto-trigger print dialog after a short delay
                 setTimeout(() => {
                     newWindow.print();
                 }, 500);
             };
         }
-        
+
         // Cleanup after a delay
         setTimeout(() => {
             URL.revokeObjectURL(url);
@@ -231,20 +235,65 @@
 
     // ========== End CV Generator Functions ==========
 
+    // Check if extension context is still valid
+    function isExtensionContextValid() {
+        try {
+            return !!(chrome.runtime && chrome.runtime.id);
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // Show context invalidated error to user
+    function showContextInvalidatedError() {
+        showError('Extension was reloaded. Please refresh this page to continue.');
+    }
+
+    // Helper function to safely access chrome.storage.local
+    async function storageSafeGet(keys) {
+        if (!isExtensionContextValid()) {
+            showContextInvalidatedError();
+            throw new Error('Extension context invalidated');
+        }
+        try {
+            return await chrome.storage.local.get(keys);
+        } catch (error) {
+            if (error.message.includes('Extension context invalidated')) {
+                showContextInvalidatedError();
+            }
+            throw error;
+        }
+    }
+
+    async function storageSafeSet(data) {
+        if (!isExtensionContextValid()) {
+            showContextInvalidatedError();
+            throw new Error('Extension context invalidated');
+        }
+        try {
+            return await chrome.storage.local.set(data);
+        } catch (error) {
+            if (error.message.includes('Extension context invalidated')) {
+                showContextInvalidatedError();
+            }
+            throw error;
+        }
+    }
+
     // Helper function to safely send messages to background script
     async function sendMessageSafely(message) {
+        if (!isExtensionContextValid()) {
+            showContextInvalidatedError();
+            throw new Error('Extension context invalidated');
+        }
         try {
-            // Check if extension context is valid
-            if (!chrome.runtime?.id) {
-                throw new Error('Extension context invalidated. Please reload the page.');
-            }
-
             const response = await chrome.runtime.sendMessage(message);
             return response;
         } catch (error) {
             if (error.message.includes('Extension context invalidated') ||
                 error.message.includes('message port closed') ||
                 error.message.includes('Receiving end does not exist')) {
+                showContextInvalidatedError();
                 throw new Error('Extension was reloaded. Please refresh this page to continue.');
             }
             throw error;
@@ -255,7 +304,7 @@
     chrome.storage.local.get(['floatingButtonEnabled'], (result) => {
         const isEnabled = result.floatingButtonEnabled !== false; // Default to true
         if (!isEnabled) {
-            console.log('Floating button is disabled');
+            log('Floating button is disabled');
             return;
         }
 
@@ -320,25 +369,29 @@
             try {
                 switch (action) {
                     case 'turnOff':
-                        console.log('Turn off clicked');
+                        log('Turn off clicked');
                         // Save preference and hide the wrapper
-                        chrome.storage.local.set({ floatingButtonEnabled: false });
+                        try {
+                            await storageSafeSet({ floatingButtonEnabled: false });
+                        } catch (e) {
+                            // Still hide the wrapper even if storage fails
+                        }
                         wrapper.style.display = 'none';
                         showSuccessToast('Floating button hidden. Re-enable in extension settings.');
                         break;
 
                     case 'analyze':
-                        console.log('Analyze job clicked');
+                        log('Analyze job clicked');
                         await handleAnalyze();
                         break;
 
                     case 'save':
-                        console.log('Add to tracker clicked');
+                        log('Add to tracker clicked');
                         await handleSaveToTracker();
                         break;
 
                     case 'openTracker':
-                        console.log('Open tracker clicked');
+                        log('Open tracker clicked');
                         showTrackerPanel();
                         break;
                 }
@@ -661,7 +714,7 @@
 
             try {
                 // Get the user's CV from storage
-                const storage = await chrome.storage.local.get(['cvText']);
+                const storage = await storageSafeGet(['cvText']);
 
                 if (!storage.cvText) {
                     showError('No CV found. Please upload your CV in the extension popup first.');
@@ -709,8 +762,28 @@
             return div.innerHTML;
         }
 
+        // Sanitize URL to prevent javascript: and other dangerous protocols
+        function sanitizeUrl(url) {
+            if (!url) return '#';
+            try {
+                const parsed = new URL(url);
+                if (!['http:', 'https:'].includes(parsed.protocol)) {
+                    return '#';
+                }
+                return url;
+            } catch {
+                return '#';
+            }
+        }
+
         // Show tracker panel
-        function showTrackerPanel() {
+        async function showTrackerPanel() {
+            // Check extension context first
+            if (!isExtensionContextValid()) {
+                showContextInvalidatedError();
+                return;
+            }
+
             // Remove existing panel if present
             const existing = document.getElementById('jd-cv-tracker-panel');
             if (existing) {
@@ -719,7 +792,8 @@
             }
 
             // Get tracker data
-            chrome.storage.local.get(['tracker'], (result) => {
+            try {
+                const result = await storageSafeGet(['tracker']);
                 const tracker = result.tracker || [];
 
                 const panel = document.createElement('div');
@@ -736,7 +810,9 @@
 
                 // Animate in
                 setTimeout(() => panel.classList.add('show'), 10);
-            });
+            } catch (error) {
+                console.error('Error showing tracker panel:', error);
+            }
         }
 
         // Store reference to showTrackerPanel for external access
@@ -778,8 +854,8 @@
                                         <button class="jd-cv-tracker-job-delete" title="Delete job" data-job-id="${escapeHtml(job.id)}">🗑️</button>
                                         <div class="jd-cv-tracker-job-title">${escapeHtml(job.roleTitle || job.pageTitle || job.title || 'Untitled')}</div>
                                         <div class="jd-cv-tracker-job-company">${escapeHtml(job.company || 'Unknown')}</div>
-                                        ${job.matchScore ? `<div class="jd-cv-tracker-job-match match-${job.matchLabel}">${job.matchScore}%</div>` : ''}
-                                        <a href="${escapeHtml(job.url)}" target="_blank" class="jd-cv-tracker-job-link" title="Open job posting" onclick="event.stopPropagation()">🔗</a>
+                                        ${job.matchScore ? `<div class="jd-cv-tracker-job-match match-${escapeHtml(job.matchLabel)}">${escapeHtml(String(job.matchScore))}%</div>` : ''}
+                                        <a href="${sanitizeUrl(job.url)}" target="_blank" rel="noopener noreferrer" class="jd-cv-tracker-job-link" title="Open job posting" onclick="event.stopPropagation()">🔗</a>
                                     </div>
                                 `).join('')}
                             </div>
@@ -848,7 +924,7 @@
 
                     // Update job status in storage
                     try {
-                        const result = await chrome.storage.local.get(['tracker']);
+                        const result = await storageSafeGet(['tracker']);
                         const tracker = result.tracker || [];
 
                         const jobIndex = tracker.findIndex(j => j.id === draggedJobId);
@@ -856,7 +932,7 @@
                             tracker[jobIndex].status = newStatus;
                             tracker[jobIndex].updatedAtUtc = new Date().toISOString();
 
-                            await chrome.storage.local.set({ tracker });
+                            await storageSafeSet({ tracker });
 
                             // Move the job card in the DOM instead of refreshing
                             const draggedCard = panel.querySelector(`.jd-cv-tracker-job[data-job-id="${draggedJobId}"]`);
@@ -939,10 +1015,10 @@
                         // Second click - actually delete
                         try {
                             // Remove from storage
-                            const result = await chrome.storage.local.get(['tracker']);
+                            const result = await storageSafeGet(['tracker']);
                             const tracker = result.tracker || [];
                             const updatedTracker = tracker.filter(j => j.id !== jobId);
-                            await chrome.storage.local.set({ tracker: updatedTracker });
+                            await storageSafeSet({ tracker: updatedTracker });
 
                             // Remove from DOM
                             const jobCard = panel.querySelector(`.jd-cv-tracker-job[data-job-id="${jobId}"]`);
@@ -1032,5 +1108,5 @@
         }
     });
 
-    console.log('JD-CV Floating Button script loaded');
+    log('JD-CV Floating Button script loaded');
 })();

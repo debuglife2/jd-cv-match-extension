@@ -4,6 +4,10 @@
 
 import * as pdfjsLib from 'pdfjs-dist';
 
+// Production mode - disable console logging
+const PRODUCTION = true;
+const log = PRODUCTION ? () => { } : console.log.bind(console);
+
 // Use local bundled worker file
 pdfjsLib.GlobalWorkerOptions.workerSrc = chrome.runtime.getURL('pdf.worker.mjs');
 
@@ -13,27 +17,27 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = chrome.runtime.getURL('pdf.worker.mjs')
  * @returns {Promise<string>} - Extracted text content
  */
 export async function extractTextFromPDF(file) {
-    console.log('Starting PDF extraction...');
+    log('Starting PDF extraction...');
     try {
         // Convert file to ArrayBuffer
-        console.log('Converting file to ArrayBuffer...');
+        log('Converting file to ArrayBuffer...');
         const arrayBuffer = await file.arrayBuffer();
-        console.log(`ArrayBuffer size: ${arrayBuffer.byteLength} bytes`);
+        log(`ArrayBuffer size: ${arrayBuffer.byteLength} bytes`);
 
         // Load PDF document
-        console.log('Loading PDF document...');
+        log('Loading PDF document...');
         const loadingTask = pdfjsLib.getDocument({
             data: arrayBuffer,
         });
         const pdf = await loadingTask.promise;
 
-        console.log(`PDF loaded: ${pdf.numPages} pages`);
+        log(`PDF loaded: ${pdf.numPages} pages`);
 
         // Extract text from all pages
         let fullText = '';
 
         for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-            console.log(`Processing page ${pageNum}/${pdf.numPages}...`);
+            log(`Processing page ${pageNum}/${pdf.numPages}...`);
             const page = await pdf.getPage(pageNum);
             const textContent = await page.getTextContent();
 
@@ -48,11 +52,11 @@ export async function extractTextFromPDF(file) {
         // Clean up text
         fullText = cleanText(fullText);
 
-        console.log(`Extracted ${fullText.length} characters from PDF`);
+        log(`Extracted ${fullText.length} characters from PDF`);
 
         return fullText;
     } catch (error) {
-        console.error('Error parsing PDF:', error);
+        log('Error parsing PDF:', error);
         throw new Error(`Failed to parse PDF: ${error.message}`);
     }
 }
@@ -90,7 +94,7 @@ export async function cacheParsedPDF(fileName, text) {
         cvText: text // Also save as CV text
     });
 
-    console.log('PDF cached:', {
+    log('PDF cached:', {
         fileName,
         size: text.length,
         timestamp: new Date(cacheData.parsedAt).toLocaleString()
@@ -111,5 +115,5 @@ export async function getCachedPDF() {
  */
 export async function clearPDFCache() {
     await chrome.storage.local.remove('pdfCache');
-    console.log('PDF cache cleared');
+    log('PDF cache cleared');
 }

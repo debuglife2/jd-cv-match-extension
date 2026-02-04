@@ -22,26 +22,66 @@ A Chrome Extension (Manifest V3) that analyzes job descriptions against your CV 
 
 ## Installation
 
-### Development Mode
+### Prerequisites
+
+- Node.js (v18 or higher)
+- npm
+- Azure OpenAI account with API access
+
+### Build from Source
 
 1. **Clone or download this repository**
 
-2. **Prepare your CV**
-   - For MVP, convert your CV to `.txt` format
-   - PDF and DOCX support will be added in future updates
+2. **Install dependencies**
+   ```bash
+   cd jd-cv-match-extension
+   npm install
+   ```
 
-3. **Open Chrome Extensions page**
+3. **Configure your Azure OpenAI credentials**
+   ```bash
+   # Copy the example environment file
+   cp .env.example .env
+   
+   # Edit .env with your own API credentials
+   # DO NOT share your .env file with anyone!
+   ```
+   
+   Edit `.env` and fill in your values:
+   ```
+   openai=https://YOUR-RESOURCE-NAME.cognitiveservices.azure.com/
+   openai_key=YOUR_API_KEY_HERE
+   openai_deployment=YOUR_DEPLOYMENT_NAME
+   ```
+
+4. **Build the extension**
+   ```bash
+   npm run build
+   ```
+   This generates the `dist/` folder with the built extension.
+
+5. **Load in Chrome**
    - Navigate to `chrome://extensions/`
    - Enable "Developer mode" (toggle in top-right corner)
-
-4. **Load the extension**
    - Click "Load unpacked"
-   - Select the `jd-cv-match-extension` folder
-   - The extension should now appear in your extensions list
+   - Select the `dist` folder (not the root folder!)
 
-5. **Pin the extension** (recommended)
+6. **Pin the extension** (recommended)
    - Click the extensions icon (puzzle piece) in Chrome toolbar
    - Find "JD-CV Match Analyzer" and click the pin icon
+
+### For Someone Sharing This Extension With You
+
+If someone shared this extension's source code with you:
+
+1. You need your **own Azure OpenAI account** with:
+   - An Azure OpenAI resource
+   - A deployed model (GPT-4 recommended)
+   - Your own API key
+
+2. Follow the "Build from Source" steps above
+
+3. **Never use someone else's API key** - you'll be charged for their usage and they can see your requests
 
 ## Setup
 

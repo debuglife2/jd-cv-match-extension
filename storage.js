@@ -1,6 +1,10 @@
 // Storage helper module for Chrome Extension
 // Handles all chrome.storage.local operations
 
+// Production mode - disable console logging
+const PRODUCTION = true;
+const log = PRODUCTION ? () => { } : console.log.bind(console);
+
 const STORAGE_KEYS = {
     CV_TEXT: 'cvText',
     SETTINGS: 'settings',
@@ -18,7 +22,7 @@ async function saveCVText(cvText) {
         [STORAGE_KEYS.CV_TEXT]: cvText,
         analysisCache: {} // Clear cache when CV is updated
     });
-    console.log('CV updated, analysis cache cleared');
+    log('CV updated, analysis cache cleared');
 }
 
 /**

@@ -1,12 +1,16 @@
 // Content script for extracting page text
 // Only runs when requested by the popup/service worker
 
+// Production mode - disable console logging
+const PRODUCTION = true;
+const log = PRODUCTION ? () => { } : console.log.bind(console);
+
 // Prevent multiple injections
 if (window.jdCvMatchExtensionLoaded) {
-    console.log('Content script already loaded, skipping re-initialization');
+    log('Content script already loaded, skipping re-initialization');
 } else {
     window.jdCvMatchExtensionLoaded = true;
-    console.log('JD-CV Match Extension content script initializing...');
+    log('JD-CV Match Extension content script initializing...');
 
     // Listen for messages from the extension
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -15,7 +19,7 @@ if (window.jdCvMatchExtensionLoaded) {
                 const content = extractPageContent();
                 sendResponse({ success: true, content });
             } catch (error) {
-                console.error('Error extracting page content:', error);
+                log('Error extracting page content:', error);
                 sendResponse({ success: false, error: error.message });
             }
             return true; // Keep the message channel open for async response
@@ -83,15 +87,15 @@ function extractPageContent() {
     // Extract role title from page title (remove company and site name)
     const roleTitle = extractRoleTitle(pageTitle, company);
 
-    // Log extraction details
-    console.log('========== CONTENT EXTRACTION ==========');
-    console.log('Page Title:', pageTitle);
-    console.log('Role Title:', roleTitle || 'Not detected');
-    console.log('Company:', company || 'Not detected');
-    console.log('Job Level:', jobLevel || 'Not detected');
-    console.log('Content Length:', mainText.length, 'chars');
-    console.log('URL:', pageUrl);
-    console.log('========================================');
+    // Log extraction details (only in dev mode)
+    log('========== CONTENT EXTRACTION ==========');
+    log('Page Title:', pageTitle);
+    log('Role Title:', roleTitle || 'Not detected');
+    log('Company:', company || 'Not detected');
+    log('Job Level:', jobLevel || 'Not detected');
+    log('Content Length:', mainText.length, 'chars');
+    log('URL:', pageUrl);
+    log('========================================');
 
     return {
         pageTitle,
@@ -354,4 +358,4 @@ function extractJobLevel(pageTitle, content) {
     return null;
 }
 
-console.log('JD-CV Match Extension content script loaded and ready');
+log('JD-CV Match Extension content script loaded and ready');

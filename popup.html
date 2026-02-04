@@ -10,199 +10,214 @@
 
 <body>
     <div class="container">
-        <!-- Header -->
-        <header class="header">
-            <h1>JD-CV Match Analyzer</h1>
-            <div class="header-actions">
-                <button id="settingsBtn" class="btn-icon" title="Settings">⚙️</button>
-                <button id="openTrackerBtn" class="btn-secondary" title="Open Job Tracker">📊 Open Tracker</button>
-                <button id="uploadCVBtn" class="btn-secondary">📄 Upload CV</button>
+        <!-- Sign In Screen (shown when not logged in) -->
+        <div id="signInScreen" class="sign-in-screen" style="display: none;">
+            <div class="sign-in-content">
+                <h1>🎯 JD-CV Match</h1>
+                <p>Analyze job descriptions against your CV and get tailored suggestions.</p>
+
+                <div class="features-list">
+                    <div class="feature">✓ AI-powered job matching</div>
+                    <div class="feature">✓ Tailored CV bullets</div>
+                    <div class="feature">✓ Job application tracker</div>
+                </div>
+
+                <button id="googleSignInBtn" class="btn-google">
+                    <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"
+                            fill="#4285F4" />
+                        <path
+                            d="M9.003 18c2.43 0 4.467-.806 5.956-2.18l-2.909-2.26c-.806.54-1.836.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z"
+                            fill="#34A853" />
+                        <path
+                            d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.96H.957C.347 6.175 0 7.55 0 9.002c0 1.452.348 2.827.957 4.042l3.007-2.332z"
+                            fill="#FBBC05" />
+                        <path
+                            d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.428 0 9.002 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z"
+                            fill="#EA4335" />
+                    </svg>
+                    Sign in with Google
+                </button>
+
+                <p class="sign-in-note">Free: 10 analyses/month</p>
             </div>
-        </header>
+        </div>
 
-        <!-- CV Upload Section (hidden file input) -->
-        <input type="file" id="cvFileInput" accept=".pdf,.txt" style="display: none;">
-
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Current JD Section -->
-            <section id="currentJDSection" class="section">
-                <h2>Current Job Description</h2>
-
-                <!-- Page Info -->
-                <div id="pageInfo" class="page-info">
-                    <div id="pageTitle" class="page-title">No page loaded</div>
-                    <div id="pageUrl" class="page-url"></div>
+        <!-- Main App (shown when logged in) -->
+        <div id="mainApp">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <h1>JD-CV Match</h1>
+                    <div id="userInfo" class="user-info">
+                        <img id="userAvatar" src="" alt="" class="user-avatar">
+                        <span id="userName"></span>
+                    </div>
                 </div>
-
-                <!-- Action Buttons -->
-                <div class="action-buttons">
-                    <button id="analyzeBtn" class="btn-primary">🔍 Analyze Current Page</button>
-                    <button id="saveToTrackerBtn" class="btn-secondary" disabled>💾 Save to Tracker</button>
-                    <button id="copyBulletsBtn" class="btn-secondary" disabled>📋 Copy Tailored Bullets</button>
+                <div class="header-actions">
+                    <button id="settingsBtn" class="btn-icon" title="Settings">⚙️</button>
+                    <button id="openTrackerBtn" class="btn-secondary" title="Open Job Tracker">📊 Tracker</button>
+                    <button id="uploadCVBtn" class="btn-secondary">📄 CV</button>
                 </div>
+            </header>
 
-                <!-- Loading State -->
-                <div id="loadingState" class="loading-state" style="display: none;">
-                    <div class="spinner"></div>
-                    <p>Analyzing job description...</p>
+            <!-- Usage Bar -->
+            <div id="usageBar" class="usage-bar">
+                <div class="usage-text">
+                    <span id="usageCount">0/10</span> analyses used
                 </div>
-
-                <!-- Error State -->
-                <div id="errorState" class="error-state" style="display: none;">
-                    <p class="error-message"></p>
+                <div class="usage-progress">
+                    <div id="usageProgress" class="usage-progress-bar" style="width: 0%"></div>
                 </div>
+            </div>
 
-                <!-- Analysis Results -->
-                <div id="analysisResults" class="analysis-results" style="display: none;">
-                    <!-- Match Score -->
-                    <div class="match-score-container">
-                        <div class="match-score">
-                            <span id="matchScore" class="score-value">--</span>
-                            <span class="score-label">Match Score</span>
-                        </div>
-                        <div id="matchLabel" class="match-label">--</div>
+            <!-- CV Upload Section (hidden file input) -->
+            <input type="file" id="cvFileInput" accept=".pdf,.txt" style="display: none;">
+
+            <!-- Main Content -->
+            <main class="main-content">
+                <!-- Current JD Section -->
+                <section id="currentJDSection" class="section">
+                    <h2>Current Job Description</h2>
+
+                    <!-- Page Info -->
+                    <div id="pageInfo" class="page-info">
+                        <div id="pageTitle" class="page-title">No page loaded</div>
+                        <div id="pageUrl" class="page-url"></div>
                     </div>
 
-                    <!-- Match Explanation -->
-                    <div class="explanation-section">
-                        <h3>Match Explanation</h3>
-                        <div class="explanation-items">
-                            <div class="explanation-item">
-                                <span class="explanation-icon">💪</span>
-                                <div>
-                                    <strong>Strength:</strong>
-                                    <p id="strengthText">--</p>
+                    <!-- Action Buttons -->
+                    <div class="action-buttons">
+                        <button id="analyzeBtn" class="btn-primary">🔍 Analyze Current Page</button>
+                        <button id="saveToTrackerBtn" class="btn-secondary" disabled>💾 Save to Tracker</button>
+                        <button id="copyBulletsBtn" class="btn-secondary" disabled>📋 Copy Tailored Bullets</button>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="loadingState" class="loading-state" style="display: none;">
+                        <div class="spinner"></div>
+                        <p>Analyzing job description...</p>
+                    </div>
+
+                    <!-- Error State -->
+                    <div id="errorState" class="error-state" style="display: none;">
+                        <p class="error-message"></p>
+                    </div>
+
+                    <!-- Analysis Results -->
+                    <div id="analysisResults" class="analysis-results" style="display: none;">
+                        <!-- Match Score -->
+                        <div class="match-score-container">
+                            <div class="match-score">
+                                <span id="matchScore" class="score-value">--</span>
+                                <span class="score-label">Match Score</span>
+                            </div>
+                            <div id="matchLabel" class="match-label">--</div>
+                        </div>
+
+                        <!-- Match Explanation -->
+                        <div class="explanation-section">
+                            <h3>Match Explanation</h3>
+                            <div class="explanation-items">
+                                <div class="explanation-item">
+                                    <span class="explanation-icon">💪</span>
+                                    <div>
+                                        <strong>Strength:</strong>
+                                        <p id="strengthText">--</p>
+                                    </div>
+                                </div>
+                                <div class="explanation-item">
+                                    <span class="explanation-icon">⚠️</span>
+                                    <div>
+                                        <strong>Risk:</strong>
+                                        <p id="riskText">--</p>
+                                    </div>
+                                </div>
+                                <div class="explanation-item">
+                                    <span class="explanation-icon">💡</span>
+                                    <div>
+                                        <strong>Suggestion:</strong>
+                                        <p id="suggestionText">--</p>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="explanation-item">
-                                <span class="explanation-icon">⚠️</span>
-                                <div>
-                                    <strong>Risk:</strong>
-                                    <p id="riskText">--</p>
+                        </div>
+
+                        <!-- Gap Analysis -->
+                        <div class="gap-analysis-section">
+                            <h3>Gap Analysis</h3>
+                            <ul id="gapAnalysisList" class="gap-list"></ul>
+                        </div>
+
+                        <!-- Tailored Bullets -->
+                        <div class="tailored-bullets-section">
+                            <h3>Tailored CV Bullets</h3>
+                            <ul id="tailoredBulletsList" class="bullets-list"></ul>
+                        </div>
+                    </div>
+                </section>
+            </main>
+
+            <!-- Settings Modal -->
+            <div id="settingsModal" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Settings</h2>
+                        <button id="closeSettingsBtn" class="btn-close">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="settingsForm">
+                            <!-- Account Section -->
+                            <div class="form-group">
+                                <h3 style="margin-top: 0; margin-bottom: 12px;">👤 Account</h3>
+                                <div id="accountInfo" class="account-info">
+                                    <img id="settingsUserAvatar" src="" alt="" class="user-avatar-large">
+                                    <div class="account-details">
+                                        <span id="settingsUserName" class="account-name"></span>
+                                        <span id="settingsUserEmail" class="account-email"></span>
+                                    </div>
                                 </div>
+                                <button type="button" id="signOutBtn" class="btn-secondary btn-danger-outline"
+                                    style="margin-top: 12px;">Sign Out</button>
                             </div>
-                            <div class="explanation-item">
-                                <span class="explanation-icon">💡</span>
-                                <div>
-                                    <strong>Suggestion:</strong>
-                                    <p id="suggestionText">--</p>
-                                </div>
+
+                            <div class="form-group"
+                                style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+                                <label
+                                    style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
+                                    <span>Show floating button on pages</span>
+                                    <input type="checkbox" id="floatingButtonEnabled" checked>
+                                </label>
+                                <small style="display: block; margin-top: 8px; color: #666;">
+                                    Toggle the floating button that appears on job pages instantly.
+                                </small>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="submit" class="btn-primary">Save Settings</button>
+                            </div>
+                        </form>
+
+                        <div class="cv-status">
+                            <h3>📄 CV Status</h3>
+                            <p id="cvStatus">No CV uploaded</p>
+                            <button id="clearCVBtn" class="btn-secondary" style="display: none;">Clear CV</button>
+                        </div>
+
+                        <div class="usage-stats-section"
+                            style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+                            <h3>📊 Usage This Month</h3>
+                            <div id="settingsUsageInfo" class="usage-stats">
+                                <p>Loading usage...</p>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Gap Analysis -->
-                    <div class="gap-analysis-section">
-                        <h3>Gap Analysis</h3>
-                        <ul id="gapAnalysisList" class="gap-list"></ul>
-                    </div>
-
-                    <!-- Tailored Bullets -->
-                    <div class="tailored-bullets-section">
-                        <h3>Tailored CV Bullets</h3>
-                        <ul id="tailoredBulletsList" class="bullets-list"></ul>
-                    </div>
-                </div>
-            </section>
-        </main>
-
-        <!-- Settings Modal -->
-        <div id="settingsModal" class="modal" style="display: none;">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>Settings</h2>
-                    <button id="closeSettingsBtn" class="btn-close">×</button>
-                </div>
-                <div class="modal-body">
-                    <div
-                        style="padding: 12px; background: #fef3c7; border-radius: 6px; margin-bottom: 16px; border-left: 3px solid #f59e0b;">
-                        <strong>⚠️ Testing Mode Active</strong>
-                        <p style="margin: 4px 0 0 0; font-size: 13px; color: #92400e;">Azure OpenAI is currently
-                            commented out. The extension will use mock data for testing the workflow. These settings are
-                            optional.</p>
-                    </div>
-
-                    <form id="settingsForm">
-                        <div class="form-group">
-                            <label for="azureEndpoint">Azure OpenAI Endpoint <span
-                                    style="color: #94a3b8; font-weight: normal;">(Optional for testing)</span></label>
-                            <input type="text" id="azureEndpoint" placeholder="https://your-resource.openai.azure.com/">
-                            <small>Example: https://your-resource.openai.azure.com/</small>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="apiKey">API Key <span style="color: #94a3b8; font-weight: normal;">(Optional -
-                                    use this OR Access Token)</span></label>
-                            <input type="password" id="apiKey" placeholder="Your Azure OpenAI API key">
-                            <small>Key-based authentication (may be disabled on your resource)</small>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="accessToken">Access Token <span
-                                    style="color: #94a3b8; font-weight: normal;">(Optional - use this OR API
-                                    Key)</span></label>
-                            <input type="password" id="accessToken" placeholder="Your Azure AD access token">
-                            <small>Token-based authentication (required if key auth is disabled)</small>
-                            <details style="margin-top: 8px;">
-                                <summary style="cursor: pointer; color: #3b82f6; font-size: 12px;">How to get an Azure
-                                    AD token?</summary>
-                                <div
-                                    style="margin-top: 8px; padding: 8px; background: #f1f5f9; border-radius: 4px; font-size: 12px;">
-                                    <p style="margin: 0 0 8px 0;">Run this command in your terminal (requires Azure
-                                        CLI):</p>
-                                    <code
-                                        style="display: block; background: #1e293b; color: #e2e8f0; padding: 8px; border-radius: 4px; overflow-x: auto;">az account get-access-token --resource https://cognitiveservices.azure.com --query accessToken -o tsv</code>
-                                    <p style="margin: 8px 0 0 0; color: #64748b;">Note: Tokens expire after ~1 hour.
-                                        You'll need to refresh periodically.</p>
-                                </div>
-                            </details>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="deployment">Deployment Name <span
-                                    style="color: #94a3b8; font-weight: normal;">(Optional for testing)</span></label>
-                            <input type="text" id="deployment" placeholder="gpt-4">
-                            <small>The name of your deployed model</small>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="apiVersion">API Version <span
-                                    style="color: #94a3b8; font-weight: normal;">(Optional for testing)</span></label>
-                            <input type="text" id="apiVersion" value="2024-02-15-preview">
-                        </div>
-
-                        <div class="form-group">
-                            <label
-                                style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
-                                <span>Show floating button on pages</span>
-                                <input type="checkbox" id="floatingButtonEnabled" checked>
-                            </label>
-                            <small style="display: block; margin-top: 8px; color: #666;">
-                                Toggle the floating button that appears on job pages instantly.
-                            </small>
-                        </div>
-
-                        <div class="form-actions">
-                            <button type="button" id="testConnectionBtn" class="btn-secondary">Test Connection
-                                (Mock)</button>
-                            <button type="submit" class="btn-primary">Save Settings</button>
-                        </div>
-                    </form>
-
-                    <div id="connectionTestResult" style="display: none; margin-top: 1rem;"></div>
-
-                    <div class="cv-status">
-                        <h3>CV Status</h3>
-                        <p id="cvStatus">No CV uploaded</p>
-                        <button id="clearCVBtn" class="btn-secondary" style="display: none;">Clear CV</button>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <script type="module" src="popup.js"></script>
+        <script type="module" src="popup.js"></script>
 </body>
 
 </html>

@@ -1,13 +1,17 @@
 // Background service worker for Chrome Extension
 // Handles extension lifecycle and messaging
 
-// Import Azure OpenAI module
-import { analyzeJDWithCV, updateCVWithTailoredBullets } from '../azureOpenAI.js';
+// Import API client for backend calls
+import * as apiClient from '../apiClient.js';
+
+// Production mode - disable console logging
+const PRODUCTION = true;
+const log = PRODUCTION ? () => { } : console.log.bind(console);
 
 // Listen for extension installation
 chrome.runtime.onInstalled.addListener((details) => {
     if (details.reason === 'install') {
-        console.log('JD-CV Match Extension installed');
+        log('JD-CV Match Extension installed');
 
         // Initialize default storage if needed
         chrome.storage.local.get(['settings', 'tracker'], (result) => {
@@ -86,7 +90,7 @@ chrome.runtime.onInstalled.addListener((details) => {
                 ];
 
                 chrome.storage.local.set({ tracker: mockJobs });
-                console.log('Mock jobs added to tracker for testing');
+                log('Mock jobs added to tracker for testing');
             }
         });
     }
@@ -149,7 +153,7 @@ async function handleExtractFromTab(tabId) {
             throw new Error(response.error || 'Failed to extract content');
         }
     } catch (error) {
-        console.error('Error in handleExtractFromTab:', error);
+        log('Error in handleExtractFromTab:', error);
         throw error;
     }
 }
@@ -174,33 +178,40 @@ function generateCacheKey(cvText, jobText) {
  */
 async function handleAnalyzeCurrentPage(tabId) {
     try {
-        // 1. Check if CV is uploaded
-        const storage = await chrome.storage.local.get(['cvText', 'settings', 'analysisCache']);
+        // 1. Check if user is logged in
+        const isLoggedIn = await apiClient.isLoggedIn();
+        if (!isLoggedIn) {
+            throw new Error('Please sign in to analyze job descriptions. Click the extension icon to sign in.');
+        }
+
+        // 2. Check if CV is uploaded
+        const storage = await chrome.storage.local.get(['cvText', 'analysisCache']);
         if (!storage.cvText) {
             throw new Error('No CV uploaded. Please upload your CV in the extension popup first.');
         }
 
-        // 2. Extract page content
+        // 3. Extract page content
         const content = await handleExtractFromTab(tabId);
 
-        console.log('Extracted content:', content);
-        console.log('Main text length:', content.mainText?.length);
+        log('Extracted content:', content);
+        log('Main text length:', content.mainText?.length);
 
-        // 3. Check cache first
+        // 4. Check cache first
         const cacheKey = generateCacheKey(storage.cvText, content.mainText);
         const analysisCache = storage.analysisCache || {};
 
         if (analysisCache[cacheKey]) {
-            console.log('✅ Using cached analysis for this job');
+            log('✅ Using cached analysis for this job');
             return analysisCache[cacheKey].analysis;
         }
 
-        console.log('🔄 No cache found, calling Azure OpenAI...');
+        log('🔄 No cache found, calling backend API...');
 
-        // 4. Analyze with Azure OpenAI
-        const analysis = await analyzeJDWithCV(storage.settings, storage.cvText, content.mainText);
+        // 5. Analyze via backend API
+        const result = await apiClient.analyzeJob(storage.cvText, content.mainText, content.pageUrl);
+        const analysis = result.analysis;
 
-        // 5. Cache the result
+        // 6. Cache the result
         analysisCache[cacheKey] = {
             analysis: analysis,
             timestamp: Date.now(),
@@ -228,7 +239,7 @@ async function handleAnalyzeCurrentPage(tabId) {
 
         return analysis;
     } catch (error) {
-        console.error('Error analyzing page:', error);
+        log('Error analyzing page:', error);
         throw error;
     }
 }
@@ -285,7 +296,7 @@ async function handleSaveToTracker(tab) {
 
         return job;
     } catch (error) {
-        console.error('Error saving to tracker:', error);
+        log('Error saving to tracker:', error);
         throw error;
     }
 }
@@ -295,22 +306,20 @@ async function handleSaveToTracker(tab) {
  */
 async function handleUpdateCV(originalCV, tailoredBullets, jobInfo) {
     try {
-        // Get settings
-        const storage = await chrome.storage.local.get(['settings']);
-        const settings = storage.settings;
-
-        if (!settings || !settings.azureEndpoint || (!settings.apiKey && !settings.accessToken)) {
-            throw new Error('Azure OpenAI not configured. Please configure in settings.');
+        // Check if user is logged in
+        const isLoggedIn = await apiClient.isLoggedIn();
+        if (!isLoggedIn) {
+            throw new Error('Please sign in to use this feature.');
         }
 
-        // Call AI to update CV
-        const updatedCV = await updateCVWithTailoredBullets(settings, originalCV, tailoredBullets, jobInfo);
+        // Call backend API to update CV
+        const result = await apiClient.updateCV(originalCV, tailoredBullets, jobInfo);
 
-        return updatedCV;
+        return result.updatedCV;
     } catch (error) {
-        console.error('Error updating CV:', error);
+        log('Error updating CV:', error);
         throw error;
     }
 }
 
-console.log('JD-CV Match Extension service worker initialized');
+log('JD-CV Match Extension service worker initialized');
