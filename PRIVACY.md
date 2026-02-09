@@ -72,7 +72,7 @@ We may update this privacy policy from time to time. We will notify users of any
 
 If you have questions about this privacy policy or your data, please contact:
 
-**Email**: [Your contact email]
+**Email**: invisiblesde@gmail.com
 
 ---
 
