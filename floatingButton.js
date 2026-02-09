@@ -76,7 +76,7 @@
             font-weight: 800;
             margin: 0 0 20px 0;
             color: #111827;
-            border-bottom: 3px solid #667eea;
+            border-bottom: 3px solid #889E19;
             padding-bottom: 10px;
         }
         h2 {
@@ -327,7 +327,7 @@
             <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
     `;
-        button.title = 'JD-CV Match';
+        button.title = 'Matcha';
 
         // Create action buttons container (hidden by default, shows on hover)
         const actionsContainer = document.createElement('div');
@@ -646,8 +646,8 @@
             <div class="jd-cv-content jd-cv-loading">
                 <div class="jd-cv-loading-spinner">
                     <svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="30" cy="30" r="25" fill="none" stroke="#e5e7eb" stroke-width="4"/>
-                        <circle cx="30" cy="30" r="25" fill="none" stroke="#3b82f6" stroke-width="4" stroke-linecap="round" stroke-dasharray="120" stroke-dashoffset="30">
+                        <circle cx="30" cy="30" r="25" fill="none" stroke="#dbebc4" stroke-width="4"/>
+                        <circle cx="30" cy="30" r="25" fill="none" stroke="#889E19" stroke-width="4" stroke-linecap="round" stroke-dasharray="120" stroke-dashoffset="30">
                             <animateTransform attributeName="transform" type="rotate" from="0 30 30" to="360 30 30" dur="1s" repeatCount="indefinite"/>
                         </circle>
                     </svg>
@@ -694,7 +694,7 @@
                 if (btn) {
                     const originalText = btn.textContent;
                     btn.textContent = '✅ Copied!';
-                    btn.style.background = '#10b981';
+                    btn.style.background = '#7a872c';
                     setTimeout(() => {
                         btn.textContent = originalText;
                         btn.style.background = '';
@@ -737,7 +737,7 @@
 
                 // Show success feedback
                 btn.textContent = '✅ Downloaded!';
-                btn.style.background = '#10b981';
+                btn.style.background = '#7a872c';
 
                 showSuccessToast(`📥 CV updated and downloaded as ${result.filename}!`);
 
@@ -1089,6 +1089,7 @@
                 }
             }
             sendResponse({ success: true });
+            return true;
         } else if (request.action === 'openTracker') {
             // Open tracker panel
             if (showTrackerPanelRef) {
@@ -1105,7 +1106,9 @@
                 }, 100);
                 sendResponse({ success: true });
             }
+            return true;
         }
+        return false;
     });
 
     log('JD-CV Floating Button script loaded');

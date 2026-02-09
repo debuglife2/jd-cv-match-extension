@@ -21,13 +21,13 @@
     width: 56px;
     height: 56px;
 
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #889E19 0%, #52681d 100%);
     color: white;
     border-radius: 50%;
 
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 
-    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 4px 20px rgba(136, 158, 25, 0.4);
     cursor: pointer;
     transition: all 0.3s ease;
 
@@ -40,7 +40,7 @@
 }
 
 #jd-cv-floating-button:hover {
-    box-shadow: 0 6px 28px rgba(102, 126, 234, 0.6);
+    box-shadow: 0 6px 28px rgba(136, 158, 25, 0.6);
 }
 
 #jd-cv-floating-button.loading svg {
@@ -155,11 +155,11 @@
 }
 
 .jd-cv-toast-success {
-    border-left: 4px solid #10b981;
+    border-left: 4px solid #889E19;
 }
 
 .jd-cv-toast svg {
-    color: #10b981;
+    color: #889E19;
     flex-shrink: 0;
 }
 
@@ -193,7 +193,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 20px 24px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #889E19 0%, #52681d 100%);
     color: white;
     flex-shrink: 0;
 }
@@ -242,8 +242,8 @@
 }
 
 .jd-cv-tracker-section.drag-over {
-    background: #eff6ff;
-    border: 2px dashed #3b82f6;
+    background: #f0f6da;
+    border: 2px dashed #889E19;
 }
 
 .jd-cv-tracker-status-header {
@@ -470,7 +470,7 @@
 }
 
 .jd-cv-content.jd-cv-info .jd-cv-header {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    background: linear-gradient(135deg, #889E19 0%, #7a872c 100%);
 }
 
 /* Loading State */
@@ -505,7 +505,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 20px 24px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #889E19 0%, #52681d 100%);
     color: white;
 }
 
@@ -570,7 +570,7 @@
 .jd-cv-score-value {
     font-size: 48px;
     font-weight: 700;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #889E19 0%, #52681d 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -657,8 +657,8 @@
 }
 
 .jd-cv-strength {
-    background: #ecfdf5;
-    border-left-color: #10b981;
+    background: #f0f6da;
+    border-left-color: #889E19;
 }
 
 .jd-cv-weakness {
@@ -667,8 +667,8 @@
 }
 
 .jd-cv-recommendation {
-    background: #eff6ff;
-    border-left-color: #3b82f6;
+    background: #f0f6da;
+    border-left-color: #889E19;
 }
 
 /* Gap List */
@@ -708,7 +708,7 @@
 
 .jd-cv-copy-bullets,
 .jd-cv-update-cv {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #889E19 0%, #52681d 100%);
     color: white;
     border: none;
     padding: 8px 16px;
@@ -721,13 +721,13 @@
 }
 
 .jd-cv-update-cv {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    background: linear-gradient(135deg, #7a872c 0%, #52681d 100%);
 }
 
 .jd-cv-copy-bullets:hover,
 .jd-cv-update-cv:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 12px rgba(136, 158, 25, 0.3);
 }
 
 .jd-cv-update-cv:hover {

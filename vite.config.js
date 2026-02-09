@@ -8,7 +8,7 @@ export default defineConfig({
             input: {
                 popup: resolve(__dirname, 'popup.html'),
                 'background/service_worker': resolve(__dirname, 'background/service_worker.js'),
-                content: resolve(__dirname, 'contentScript.js'),
+                contentScript: resolve(__dirname, 'contentScript.js'),
                 floatingButton: resolve(__dirname, 'floatingButton.js'),
                 cvGenerator: resolve(__dirname, 'cvGenerator.js'),
                 pdfParser: resolve(__dirname, 'pdfParser.js'),
@@ -104,6 +104,22 @@ export const DEFAULT_CONFIG = {
                         console.warn(`⚠ Could not copy icons/${icon}:`, err.message);
                     }
                 });
+
+                // Copy assets folder
+                const assetsDir = resolve(__dirname, 'dist/assets');
+                if (!existsSync(assetsDir)) {
+                    mkdirSync(assetsDir, { recursive: true });
+                }
+
+                try {
+                    copyFileSync(
+                        resolve(__dirname, 'assets', 'icon.png'),
+                        resolve(__dirname, 'dist/assets', 'icon.png')
+                    );
+                    console.log('✓ Copied assets/icon.png');
+                } catch (err) {
+                    console.warn('⚠ Could not copy assets/icon.png:', err.message);
+                }
 
                 // 复制 background 文件夹结构
                 const bgDir = resolve(__dirname, 'dist/background');

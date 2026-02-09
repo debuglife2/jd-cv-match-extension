@@ -11,7 +11,7 @@ const log = PRODUCTION ? () => { } : console.log.bind(console);
 // Listen for extension installation
 chrome.runtime.onInstalled.addListener((details) => {
     if (details.reason === 'install') {
-        log('JD-CV Match Extension installed');
+        log('Matcha Extension installed');
 
         // Initialize default storage if needed
         chrome.storage.local.get(['settings', 'tracker'], (result) => {
@@ -98,6 +98,14 @@ chrome.runtime.onInstalled.addListener((details) => {
 
 // Listen for messages from popup or content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'signInWithGoogle') {
+        // Handle Google OAuth in background to prevent popup close issues
+        handleGoogleSignIn()
+            .then(user => sendResponse({ success: true, user }))
+            .catch(error => sendResponse({ success: false, error: error.message }));
+        return true; // Keep message channel open for async response
+    }
+
     if (request.action === 'extractFromTab') {
         // Request to extract content from active tab
         handleExtractFromTab(request.tabId)
@@ -139,7 +147,7 @@ async function handleExtractFromTab(tabId) {
         // Inject content script if not already present
         await chrome.scripting.executeScript({
             target: { tabId: tabId },
-            files: ['content.js']
+            files: ['contentScript.js']
         });
 
         // Send message to content script to extract content
@@ -322,4 +330,20 @@ async function handleUpdateCV(originalCV, tailoredBullets, jobInfo) {
     }
 }
 
-log('JD-CV Match Extension service worker initialized');
+/**
+ * Handle Google Sign In in background service worker
+ * This prevents issues with popup closing during OAuth flow
+ */
+async function handleGoogleSignIn() {
+    try {
+        log('Background: Starting Google Sign In...');
+        const user = await apiClient.signInWithGoogle();
+        log('Background: Sign in successful:', user?.email);
+        return user;
+    } catch (error) {
+        log('Background: Sign in error:', error);
+        throw error;
+    }
+}
+
+log('Matcha Extension service worker initialized');

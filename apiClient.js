@@ -1,10 +1,10 @@
 /**
- * API Client for JD-CV Match Backend
+ * API Client for Matcha Backend
  * Handles authentication and API calls
  */
 
-// Backend URL - change to your Railway URL after deployment
-const API_BASE_URL = 'http://localhost:3000';
+// Backend URL - Production
+const API_BASE_URL = 'https://jd-cv-backend-production.up.railway.app';
 
 // Google OAuth Client ID
 const GOOGLE_CLIENT_ID = '737539383779-8bc3aah7oc5oasb6tavc68kotv41elip.apps.googleusercontent.com';

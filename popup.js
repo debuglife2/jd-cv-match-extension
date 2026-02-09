@@ -4,7 +4,7 @@ import { extractTextFromPDF, cacheParsedPDF, getCachedPDF } from './pdfParser.js
 import * as apiClient from './apiClient.js';
 
 // Production mode - set to true to disable console logging
-const PRODUCTION = false; // TEMPORARILY FALSE FOR DEBUGGING
+const PRODUCTION = true;
 const log = PRODUCTION ? () => { } : console.log.bind(console);
 
 // State
@@ -90,8 +90,16 @@ async function handleGoogleSignIn() {
     btn.disabled = true;
 
     try {
-        console.log('Starting Google Sign In...');
-        currentUser = await apiClient.signInWithGoogle();
+        console.log('Starting Google Sign In via background...');
+
+        // Use background script to handle OAuth to avoid popup close issues
+        const response = await chrome.runtime.sendMessage({ action: 'signInWithGoogle' });
+
+        if (!response.success) {
+            throw new Error(response.error || 'Sign in failed');
+        }
+
+        currentUser = response.user;
         console.log('Sign in successful:', currentUser);
         showMainApp();
         await initializeUI();
@@ -377,7 +385,7 @@ async function handleAnalyze() {
         try {
             await chrome.scripting.executeScript({
                 target: { tabId: tab.id },
-                files: ['content.js']
+                files: ['contentScript.js']
             });
             log('Content script injected successfully');
             injectionSucceeded = true;
@@ -405,7 +413,7 @@ async function handleAnalyze() {
                 log('Retrying injection and message...');
                 await chrome.scripting.executeScript({
                     target: { tabId: tab.id },
-                    files: ['content.js']
+                    files: ['contentScript.js']
                 });
                 await new Promise(resolve => setTimeout(resolve, 500));
                 response = await chrome.tabs.sendMessage(tab.id, {

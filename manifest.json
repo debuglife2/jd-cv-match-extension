@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
-    "name": "JD-CV Match Analyzer",
+    "name": "Matcha",
     "version": "1.0.0",
-    "description": "Analyze job descriptions against your CV and get tailored suggestions using AI",
+    "description": "Your cute job hunting companion - match jobs to your CV with AI and track your application journey",
     "permissions": [
         "activeTab",
         "scripting",
@@ -17,27 +17,7 @@
         ]
     },
     "host_permissions": [
-        "https://www.linkedin.com/*",
-        "https://linkedin.com/*",
-        "https://*.greenhouse.io/*",
-        "https://*.lever.co/*",
-        "https://*.workday.com/*",
-        "https://*.myworkdayjobs.com/*",
-        "https://*.icims.com/*",
-        "https://*.smartrecruiters.com/*",
-        "https://*.jobvite.com/*",
-        "https://careers.google.com/*",
-        "https://www.amazon.jobs/*",
-        "https://jobs.apple.com/*",
-        "https://careers.microsoft.com/*",
-        "https://www.metacareers.com/*",
-        "https://*.indeed.com/*",
-        "https://*.glassdoor.com/*",
-        "https://*.ziprecruiter.com/*",
-        "https://*.dice.com/*",
-        "https://*.monster.com/*",
-        "https://*.angel.co/*",
-        "https://*.wellfound.com/*"
+        "<all_urls>"
     ],
     "action": {
         "default_popup": "popup.html",
@@ -54,30 +34,10 @@
     "content_scripts": [
         {
             "matches": [
-                "https://www.linkedin.com/*",
-                "https://linkedin.com/*",
-                "https://*.greenhouse.io/*",
-                "https://*.lever.co/*",
-                "https://*.workday.com/*",
-                "https://*.myworkdayjobs.com/*",
-                "https://*.icims.com/*",
-                "https://*.smartrecruiters.com/*",
-                "https://*.jobvite.com/*",
-                "https://careers.google.com/*",
-                "https://www.amazon.jobs/*",
-                "https://jobs.apple.com/*",
-                "https://careers.microsoft.com/*",
-                "https://www.metacareers.com/*",
-                "https://*.indeed.com/*",
-                "https://*.glassdoor.com/*",
-                "https://*.ziprecruiter.com/*",
-                "https://*.dice.com/*",
-                "https://*.monster.com/*",
-                "https://*.angel.co/*",
-                "https://*.wellfound.com/*"
+                "<all_urls>"
             ],
             "js": [
-                "content.js",
+                "contentScript.js",
                 "floatingButton.js"
             ],
             "css": [
@@ -97,9 +57,7 @@
                 "pdf.worker.mjs"
             ],
             "matches": [
-                "https://www.linkedin.com/*",
-                "https://*.greenhouse.io/*",
-                "https://*.lever.co/*"
+                "<all_urls>"
             ]
         }
     ],

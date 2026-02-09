@@ -10,7 +10,7 @@ if (window.jdCvMatchExtensionLoaded) {
     log('Content script already loaded, skipping re-initialization');
 } else {
     window.jdCvMatchExtensionLoaded = true;
-    log('JD-CV Match Extension content script initializing...');
+    log('Matcha Extension content script initializing...');
 
     // Listen for messages from the extension
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -358,4 +358,4 @@ function extractJobLevel(pageTitle, content) {
     return null;
 }
 
-log('JD-CV Match Extension content script loaded and ready');
+log('Matcha Extension content script loaded and ready');
