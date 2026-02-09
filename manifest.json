@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "Matcha",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Your cute job hunting companion - match jobs to your CV with AI and track your application journey",
     "permissions": [
         "activeTab",
@@ -17,7 +17,9 @@
         ]
     },
     "host_permissions": [
-        "<all_urls>"
+        "https://www.linkedin.com/*",
+        "https://linkedin.com/*",
+        "https://*.indeed.com/*"
     ],
     "action": {
         "default_popup": "popup.html",
@@ -34,7 +36,9 @@
     "content_scripts": [
         {
             "matches": [
-                "<all_urls>"
+                "https://www.linkedin.com/*",
+                "https://linkedin.com/*",
+                "https://*.indeed.com/*"
             ],
             "js": [
                 "contentScript.js",
@@ -57,7 +61,8 @@
                 "pdf.worker.mjs"
             ],
             "matches": [
-                "<all_urls>"
+                "https://www.linkedin.com/*",
+                "https://*.indeed.com/*"
             ]
         }
     ],
