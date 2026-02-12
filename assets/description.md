@@ -5,6 +5,6 @@ JD-CV Match Analyzer uses AI to compare job descriptions with your CV and gives 
 - Skill Gaps to address
 - Tailored CV bullets ready to copy-paste
 
-Works on LinkedIn, Indeed, Glassdoor, Greenhouse, Lever, Workday, and more.
+Works on any job posting page. Simply paste a job description or let the extension detect it automatically.
 
 Upload your CV once. Analyze unlimited job postings. Apply smarter.
